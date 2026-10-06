@@ -1,0 +1,22 @@
+{
+  "name": "folio-career-os",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @folio/frontend",
+    "build": "npm run build --workspace @folio/frontend",
+    "start": "npm run start --workspace @folio/frontend",
+    "typecheck": "npm run typecheck --workspaces",
+    "test": "npm run test --workspace @folio/backend",
+    "format": "prettier --write frontend/src frontend/*.json frontend/*.ts frontend/*.mjs backend/src backend/tests backend/*.json shared/src shared/*.json docs README.md frontend/README.md backend/README.md shared/README.md package.json package-lock.json tsconfig.base.json"
+  },
+  "devDependencies": {
+    "prettier": "3.9.9",
+    "typescript": "7.0.2"
+  }
+}

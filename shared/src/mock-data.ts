@@ -1,0 +1,292 @@
+import type { AppData, Experience, Section, Job } from "./types";
+const demoExperience = (
+  id: string,
+  title: string,
+  role: string,
+  skills: string[],
+  competencies: string[],
+  color: string,
+  icon: Experience["icon"],
+  description: string,
+  claims: Record<Section, string>,
+  type = "프로젝트",
+  startDate = "2025-03",
+  endDate = "2025-06",
+): Experience => {
+  const evidence = [
+    {
+      id: id + "-readme",
+      type: "github" as const,
+      source: "프로젝트 README",
+      reference: "README.md · 프로젝트 소개",
+      content:
+        Object.values(claims).join("\n") +
+        "\n사용 기술: " +
+        skills.join(", ") +
+        "\n핵심 역량: " +
+        competencies.join(", "),
+      supportedSkills: [...skills, ...competencies],
+      status: "source_verified" as const,
+    },
+    {
+      id: id + "-code",
+      type: "github" as const,
+      source: "구현 코드",
+      reference: "src/ · 구현 내용 (예시)",
+      content: claims.action + "\n사용 기술: " + skills.join(", "),
+      status: "source_verified" as const,
+    },
+    {
+      id: id + "-slides",
+      type: "pdf" as const,
+      source: "프로젝트 발표자료.pdf",
+      reference: "프로젝트 회고 · 예시 발췌",
+      content: claims.result + "\n" + claims.learning,
+      status: "source_verified" as const,
+    },
+  ];
+  return {
+    id,
+    title,
+    type,
+    organization: "개인 데모 라이브러리",
+    startDate,
+    endDate,
+    description,
+    role,
+    skills,
+    competencies,
+    color,
+    icon,
+    status: "approved",
+    createdAt: "2026-10-01T09:00:00Z",
+    isDemo: true,
+    evidence,
+    claims: (Object.entries(claims) as [Section, string][]).map(([section, content]) => ({
+      section,
+      content,
+      status: "source_verified",
+      evidenceIds: [
+        section === "action"
+          ? id + "-code"
+          : section === "result" || section === "learning"
+            ? id + "-slides"
+            : id + "-readme",
+      ],
+    })),
+  };
+};
+export const demoExperiences: Experience[] = [
+  demoExperience(
+    "playground",
+    "함께 만드는 웹 게임, Playground",
+    "Frontend Developer",
+    ["React", "JavaScript", "API Integration", "Git"],
+    ["Frontend Development", "Problem Solving", "Collaboration"],
+    "blue",
+    "code",
+    "실시간으로 친구들과 즐기는 웹 기반 멀티플레이 게임",
+    {
+      problem: "설치 없이 친구들과 함께 즐길 수 있는 온라인 게임 환경이 필요했습니다.",
+      role: "프론트엔드 개발 및 게임 화면 인터랙션을 담당했습니다.",
+      action:
+        "React로 게임 로비와 플레이 화면을 구현하고, REST API를 연동했습니다. 팀원들과 공통 컴포넌트 규칙을 정했습니다.",
+      result: "방 생성부터 게임 참여까지 연결된 웹 게임을 구현했습니다.",
+      learning: "실시간 상태를 일관되게 관리하는 방법과 협업을 위한 컴포넌트 설계를 배웠습니다.",
+    },
+  ),
+  demoExperience(
+    "glucare",
+    "내 건강에 맞춘 한 끼, Glucare",
+    "Frontend · AI Service",
+    ["React", "FastAPI", "API Integration", "Recommendation System"],
+    ["UX Design", "Problem Solving"],
+    "mint",
+    "heart",
+    "당뇨 환자의 건강 데이터를 활용한 맞춤 식단 추천 서비스",
+    {
+      problem: "당뇨 환자가 자신의 건강 상태에 맞는 식단을 선택하기 어렵습니다.",
+      role: "프론트엔드 개발과 추천 결과 UI 설계를 맡았습니다.",
+      action: "React 기반 건강 정보 입력 폼과 추천 결과 페이지를 구현하고 추천 API와 연결했습니다.",
+      result: "사용자가 건강 정보를 입력하면 맞춤 식단을 확인할 수 있는 서비스를 구현했습니다.",
+      learning: "건강 정보를 이해하기 쉬운 인터페이스로 전달하는 UX의 중요성을 배웠습니다.",
+    },
+    "프로젝트",
+    "2025-07",
+    "2025-10",
+  ),
+  demoExperience(
+    "scent",
+    "감정을 읽는 향, Scent Lab",
+    "Research Assistant",
+    ["Python", "Data Analysis"],
+    ["Research", "Problem Solving"],
+    "violet",
+    "brain",
+    "EEG 신호와 감정 데이터를 분석한 향 추천 연구",
+    {
+      problem: "사용자의 현재 감정에 맞는 향을 선택할 방법을 탐색했습니다.",
+      role: "뇌파 데이터 전처리와 탐색적 분석을 담당했습니다.",
+      action: "Python으로 EEG 데이터를 전처리하고 신호 특징과 감정 레이블을 비교했습니다.",
+      result: "향 추천 연구를 위한 데이터 분석 결과를 연구팀과 공유했습니다.",
+      learning: "데이터 품질이 분석 결과에 미치는 영향과 연구 과정의 기록 방법을 배웠습니다.",
+    },
+    "연구",
+    "2025-01",
+    "2025-04",
+  ),
+  demoExperience(
+    "design",
+    "사용자를 이해하는 디자인 스프린트",
+    "UX Designer",
+    ["Figma", "UX Design"],
+    ["Collaboration", "Problem Solving"],
+    "peach",
+    "design",
+    "동아리 신규 회원 온보딩 경험 개선",
+    {
+      problem: "신규 회원이 동아리 활동 정보를 찾기 어렵다는 피드백이 있었습니다.",
+      role: "사용자 인터뷰 정리와 화면 설계를 맡았습니다.",
+      action: "인터뷰 의견을 분류하고 Figma로 온보딩 화면을 설계했습니다.",
+      result: "신규 회원을 위한 안내 프로토타입을 제작했습니다.",
+      learning: "사용자의 표현에서 반복되는 문제를 발견하는 방법을 배웠습니다.",
+    },
+    "동아리",
+    "2024-09",
+    "2024-12",
+  ),
+  demoExperience(
+    "intern",
+    "팀의 작업을 연결하는 운영 도구",
+    "Product Intern",
+    ["JavaScript", "API Integration"],
+    ["Collaboration"],
+    "sky",
+    "briefcase",
+    "내부 작업 현황을 확인하는 대시보드 제작",
+    {
+      problem: "팀마다 작업 현황을 따로 관리해 정보 확인에 시간이 필요했습니다.",
+      role: "내부 대시보드 화면 개발을 지원했습니다.",
+      action: "작업 목록 화면을 구현하고 기존 API를 연결했습니다.",
+      result: "팀원들이 작업 현황을 확인할 수 있는 내부 도구를 제작했습니다.",
+      learning: "업무 맥락을 이해한 후 개발 범위를 정하는 방법을 배웠습니다.",
+    },
+    "인턴",
+    "2024-07",
+    "2024-08",
+  ),
+  demoExperience(
+    "community",
+    "개발을 함께 배우는 스터디 운영",
+    "Study Organizer",
+    ["Git"],
+    ["Collaboration", "Problem Solving"],
+    "yellow",
+    "users",
+    "프론트엔드 학습 스터디 기획 및 운영",
+    {
+      problem: "혼자 공부할 때 학습을 꾸준히 이어가기 어려웠습니다.",
+      role: "스터디 일정과 코드 리뷰 진행을 담당했습니다.",
+      action: "공동 학습 계획을 만들고 Git 기반 코드 리뷰를 진행했습니다.",
+      result: "동료들과 학습 내용과 실습 코드를 공유했습니다.",
+      learning: "피드백을 전달하고 공동 목표를 관리하는 방법을 배웠습니다.",
+    },
+    "동아리",
+    "2024-03",
+    "2024-06",
+  ),
+];
+export const demoJobs: Job[] = [
+  {
+    id: "toss",
+    company: "토스",
+    position: "Frontend Developer",
+    description:
+      "[예시 채용공고]\n주요 업무: React 기반 웹 서비스 개발, 사용자 경험 개선, API 연동, 팀 협업\n필수: React, JavaScript, API Integration, Problem Solving, Collaboration\n우대: TypeScript, Testing, CI/CD",
+    skills: [
+      { name: "React", importance: 5, kind: "required" },
+      { name: "JavaScript", importance: 5, kind: "required" },
+      { name: "API Integration", importance: 5, kind: "required" },
+      { name: "Problem Solving", importance: 5, kind: "required" },
+      { name: "Collaboration", importance: 5, kind: "required" },
+      { name: "TypeScript", importance: 2, kind: "preferred" },
+      { name: "Testing", importance: 2, kind: "preferred" },
+      { name: "CI/CD", importance: 2, kind: "preferred" },
+    ],
+    responsibilities: [
+      "React 기반 웹 서비스 개발",
+      "사용자 경험을 고려한 인터페이스 설계",
+      "API 연동 및 제품 팀과의 협업",
+    ],
+    createdAt: "2026-10-03T09:00:00Z",
+    isDemo: true,
+  },
+  {
+    id: "naver",
+    company: "네이버",
+    position: "Frontend Engineer",
+    description:
+      "[예시 채용공고]\nReact, JavaScript 기반 서비스 개발\n필수: React, JavaScript, Collaboration\n우대: TypeScript, Next.js, Testing",
+    skills: [
+      { name: "React", importance: 5, kind: "required" },
+      { name: "JavaScript", importance: 5, kind: "required" },
+      { name: "Collaboration", importance: 5, kind: "required" },
+      { name: "TypeScript", importance: 2, kind: "preferred" },
+      { name: "Next.js", importance: 2, kind: "preferred" },
+      { name: "Testing", importance: 2, kind: "preferred" },
+    ],
+    responsibilities: ["서비스 UI 개발", "제품 팀과의 협업"],
+    createdAt: "2026-10-02T09:00:00Z",
+    isDemo: true,
+  },
+  {
+    id: "carrot",
+    company: "당근",
+    position: "Product Engineer",
+    description:
+      "[예시 채용공고]\n필수: React, API Integration, UX Design, Collaboration\n우대: TypeScript, Testing",
+    skills: [
+      { name: "React", importance: 5, kind: "required" },
+      { name: "API Integration", importance: 5, kind: "required" },
+      { name: "UX Design", importance: 5, kind: "required" },
+      { name: "Collaboration", importance: 5, kind: "required" },
+      { name: "TypeScript", importance: 2, kind: "preferred" },
+      { name: "Testing", importance: 2, kind: "preferred" },
+    ],
+    responsibilities: ["사용자 중심 제품 개발", "인터페이스 및 API 연동"],
+    createdAt: "2026-10-01T09:00:00Z",
+    isDemo: true,
+  },
+];
+export const emptyData = (name = "새로운 사용자", email = ""): AppData => ({
+  version: 1,
+  profile: { name, email, headline: "경험으로 나를 소개합니다.", about: "" },
+  experiences: [],
+  jobs: [],
+  portfolios: [],
+  session: false,
+});
+export const initialData = (): AppData => ({
+  version: 1,
+  profile: {
+    name: "김민준",
+    email: "minjun@example.com",
+    headline: "사용자의 문제를 해결하는 프론트엔드 개발자",
+    about:
+      "사용자에게 필요한 경험을 고민하고, 아이디어를 실제 서비스로 연결합니다. 프로젝트와 연구에서 배운 내용을 바탕으로 성장하고 있습니다.",
+  },
+  experiences: structuredClone(demoExperiences),
+  jobs: structuredClone(demoJobs),
+  portfolios: [
+    {
+      id: "toss-portfolio",
+      jobId: "toss",
+      title: "토스 · Frontend Developer",
+      slug: "frontend-portfolio",
+      experienceIds: ["playground", "glucare"],
+      visibility: "private",
+      createdAt: "2026-10-03T09:00:00Z",
+    },
+  ],
+  session: false,
+});

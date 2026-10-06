@@ -1,0 +1,21 @@
+{
+  "name": "@folio/backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./mock": "./src/mock.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts"
+  },
+  "dependencies": {
+    "@folio/shared": "0.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.4",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2"
+  }
+}
