@@ -45,9 +45,9 @@ export function JobLibrary() {
   return (
     <>
       <PageHeading
-        eyebrow="YOUR NEXT OPPORTUNITY"
-        title="나의 다음 기회"
-        description="관심 있는 공고를 모으고, 어떤 경험을 보여주면 좋을지 확인하세요."
+        eyebrow="LIBRARY / JOB NOTES"
+        title="채용공고 노트"
+        description="관심 있는 공고를 읽고, 내 경험과 이어지는 지점을 찾아보세요."
         action={
           <Button asChild>
             <Link href="/jobs/new">

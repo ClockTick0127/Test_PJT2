@@ -1,339 +1,262 @@
 "use client";
+
 import Link from "next/link";
+import { useState } from "react";
 import {
-  Plus,
-  Layers3,
-  Sparkles,
-  BriefcaseBusiness,
-  PanelsTopLeft,
   ArrowUpRight,
-  Check,
-  Target,
-  ShieldCheck,
   BookOpen,
+  BriefcaseBusiness,
   ChevronRight,
+  FilePlus2,
+  FileText,
+  FolderOpen,
+  PenLine,
+  Search,
+  ShieldCheck,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { rankExperiences } from "@/lib/mock-analysis";
 import { Button } from "./ui/button";
-import { Badge, Empty } from "./ui/primitives";
-import {
-  PageHeading,
-  SectionHeading,
-  ExperienceCard,
-  AddExperienceCard,
-  JobRow,
-  JobLogo,
-  ScoreRing,
-} from "./shared";
+import { Empty } from "./ui/primitives";
+import { PageHeading, SectionHeading, JobLogo } from "./shared";
+import { DocumentList } from "./document-list";
+
 export function Dashboard() {
   const { data } = useStore();
   const { experiences, jobs, portfolios, profile } = data;
-  const approved = experiences.filter((e) => e.status === "approved").length;
-  const stats = [
-    {
-      label: "등록한 경험",
-      value: experiences.length,
-      unit: "개",
-      icon: Layers3,
-      tone: "blue",
-      note: "나를 만드는 경험의 기록",
-      href: "/experience",
-    },
-    {
-      label: "분석 완료",
-      value: approved,
-      unit: "개",
-      icon: Sparkles,
-      tone: "violet",
-      note: "내 강점이 정리되어 있어요",
-      href: "/experience",
-    },
-    {
-      label: "지원 공고",
-      value: jobs.length,
-      unit: "개",
-      icon: BriefcaseBusiness,
-      tone: "mint",
-      note: "다음 기회를 살펴보세요",
-      href: "/jobs",
-    },
-    {
-      label: "생성한 포트폴리오",
-      value: portfolios.length,
-      unit: "개",
-      icon: PanelsTopLeft,
-      tone: "peach",
-      note: "경험을 나만의 이야기로",
-      href: "/portfolio",
-    },
-  ];
+  const [query, setQuery] = useState("");
+  const [tab, setTab] = useState("all");
+  const approved = experiences.filter((experience) => experience.status === "approved").length;
+  const drafts = experiences.length - approved;
+  const evidenceCount = experiences.reduce(
+    (sum, experience) => sum + experience.evidence.length,
+    0,
+  );
+  const documents = experiences.filter(
+    (experience) =>
+      (tab === "all" || experience.status === tab) &&
+      (experience.title + " " + experience.role + " " + experience.skills.join(" "))
+        .toLowerCase()
+        .includes(query.toLowerCase()),
+  );
   const topJob = jobs[0];
-  const ranked = topJob ? rankExperiences(experiences, topJob) : [];
-  const counts = experiences.reduce<Record<string, number>>((acc, e) => {
-    e.skills.forEach((s) => (acc[s] = (acc[s] || 0) + 1));
-    return acc;
-  }, {});
-  const topSkills = Object.entries(counts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 6);
+  const bestMatch = topJob ? rankExperiences(experiences, topJob)[0] : undefined;
+  const stats = [
+    { label: "경험 문서", value: experiences.length, href: "/experience" },
+    { label: "정리 완료", value: approved, href: "/experience" },
+    { label: "채용공고 노트", value: jobs.length, href: "/jobs" },
+    { label: "포트폴리오", value: portfolios.length, href: "/portfolio" },
+  ];
+
   return (
     <>
       <PageHeading
-        eyebrow="YOUR CAREER WORKSPACE"
-        title={"안녕하세요, " + profile.name + "님 👋"}
-        description={
-          experiences.length
-            ? "지금까지 " +
-              experiences.length +
-              "개의 경험이 모였어요. 다음 기회를 함께 준비해볼까요?"
-            : "첫 번째 경험을 남기고 나만의 커리어 여정을 시작해보세요."
-        }
+        eyebrow="MY WORKSPACE"
+        title="나의 문서 작업실"
+        description={profile.name + "님, 오늘의 경험을 기록하고 다음 이야기를 준비해보세요."}
         action={
-          <Button asChild>
-            <Link href="/experience/new">
-              <Plus size={17} />
-              경험 추가
-            </Link>
-          </Button>
+          <span className="workspace-heading-note">
+            <ShieldCheck size={15} />
+            근거와 함께 쌓이는 기록
+          </span>
         }
       />
-      <div className="career-banner">
-        <div className="banner-copy">
-          <Badge tone="blue">
-            <Sparkles size={12} />
-            YOUR NEXT CHAPTER
-          </Badge>
-          <h2>
-            기록한 경험이,
-            <br className="mobile-break" /> 다음 기회의 시작.
-          </h2>
-          <p>흩어진 경험을 모으고, 나에게 맞는 기회와 연결하세요.</p>
-          <Link href="/jobs">
-            내 경험에 맞는 공고 찾기
-            <ArrowUpRight size={15} />
-          </Link>
-        </div>
-        <div className="banner-flow" aria-label="경험에서 포트폴리오로 이어지는 흐름">
+      <div className="writing-start-grid">
+        <Link href="/experience/new" className="writing-start">
+          <span className="writing-illustration">
+            <FilePlus2 size={43} strokeWidth={1} />
+            <i />
+            <i />
+          </span>
           <div>
-            <span>
-              <Layers3 size={24} />
+            <span className="writing-kicker">START WRITING</span>
+            <h2>새로운 경험 기록하기</h2>
+            <p>작은 메모도 좋은 문서의 시작이 됩니다.</p>
+            <span className="writing-action">
+              빈 문서에서 시작
+              <ArrowUpRight size={14} />
             </span>
-            <small>Experience</small>
           </div>
-          <i />
+        </Link>
+        <Link href="/jobs" className="writing-start secondary">
+          <span className="writing-illustration">
+            <BookOpen size={43} strokeWidth={1} />
+            <Search size={19} />
+          </span>
           <div>
-            <span>
-              <ShieldCheck size={24} />
+            <span className="writing-kicker">FIND YOUR STORY</span>
+            <h2>공고에 맞는 경험 찾기</h2>
+            <p>기록해둔 경험을 다음 기회와 연결하세요.</p>
+            <span className="writing-action">
+              채용공고 노트 열기
+              <ArrowUpRight size={14} />
             </span>
-            <small>Evidence</small>
           </div>
-          <i />
-          <div>
-            <span>
-              <Target size={24} />
-            </span>
-            <small>Job fit</small>
-          </div>
-          <i />
-          <div>
-            <span>
-              <PanelsTopLeft size={24} />
-            </span>
-            <small>Portfolio</small>
-          </div>
-        </div>
+        </Link>
       </div>
-      <div className="stats-grid">
-        {stats.map(({ label, value, unit, icon: Icon, tone, note, href }) => (
-          <Link key={label} href={href} className="stat-card">
-            <div className="stat-top">
-              <span className={"stat-icon tone-" + tone}>
-                <Icon size={19} strokeWidth={1.7} />
-              </span>
-              <span>{label}</span>
-              <ArrowUpRight size={15} />
-            </div>
-            <div className="stat-number">
-              {value}
-              <small>{unit}</small>
-            </div>
-            <p>{note}</p>
+      <div className="workspace-summary">
+        {stats.map((stat) => (
+          <Link key={stat.label} href={stat.href}>
+            <span>{stat.label}</span>
+            <strong>
+              {stat.value}
+              <small>개</small>
+            </strong>
+            <ChevronRight size={13} />
           </Link>
         ))}
       </div>
-      <div className="dashboard-columns">
-        <div className="dashboard-left">
-          <SectionHeading
-            title="최근 경험"
-            description="하나씩 쌓아가는, 나만의 가능성"
-            link="전체 보기"
-            href="/experience"
-          />
-          <div className="recent-experiences">
-            {experiences.slice(0, 3).map((e) => (
-              <ExperienceCard key={e.id} experience={e} />
-            ))}
-            {!experiences.length && <AddExperienceCard />}
-          </div>
-          <div className="dashboard-lower">
-            <section className="panel skills-panel">
-              <SectionHeading title="내 경험의 핵심 기술" link="살펴보기" href="/experience" />
-              <p className="muted">경험 속에서 발견한 나의 강점이에요.</p>
-              {topSkills.length ? (
-                <div className="skill-bars">
-                  {topSkills.slice(0, 4).map(([name, count], i) => (
-                    <div className="skill-bar-row" key={name}>
-                      <span>{name}</span>
-                      <div>
-                        <i
-                          style={{
-                            width: (count / Math.max(...topSkills.map((s) => s[1]))) * 100 + "%",
-                            opacity: 1 - i * 0.13,
-                          }}
-                        />
-                      </div>
-                      <small>{count}개 경험</small>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="muted">경험을 등록하면 사용 기술을 모아볼 수 있어요.</p>
-              )}
-              <div className="panel-bottom-note">
-                <ShieldCheck size={14} />
-                확인한 경험을 바탕으로 정리합니다.
-              </div>
-            </section>
-            <section className="panel jobs-panel">
-              <SectionHeading title="최근 지원 공고" link="전체 보기" href="/jobs" />
-              {jobs.slice(0, 3).map((j) => (
-                <JobRow key={j.id} job={j} experiences={experiences} />
-              ))}
-              {!jobs.length && (
-                <Empty
-                  icon={<BriefcaseBusiness size={24} />}
-                  title="다음 기회를 찾아보세요"
-                  description="관심 있는 공고를 등록하면 경험을 연결해드려요."
+      <div className="document-home-columns">
+        <section className="document-home-main">
+          <SectionHeading title="최근 경험 문서" link="문서함 열기" href="/experience" />
+          <div className="document-home-toolbar">
+            <div className="document-tabs" role="group" aria-label="최근 문서 상태">
+              {[
+                { value: "all", label: "전체 문서", count: experiences.length },
+                { value: "approved", label: "정리 완료", count: approved },
+                { value: "review", label: "초안", count: drafts },
+              ].map((item) => (
+                <button
+                  key={item.value}
+                  aria-pressed={tab === item.value}
+                  className={tab === item.value ? "active" : ""}
+                  onClick={() => setTab(item.value)}
                 >
-                  <Button asChild size="sm">
-                    <Link href="/jobs/new">공고 등록하기</Link>
-                  </Button>
-                </Empty>
-              )}
-            </section>
-          </div>
-        </div>
-        <aside className="dashboard-right">
-          <SectionHeading title="지금, 한 걸음 더" />
-          <div className="recommended-panel">
-            <div className="recommended-eyebrow">
-              <Target size={15} />
-              추천 커리어 액션
+                  {item.label}
+                  <span>{item.count}</span>
+                </button>
+              ))}
             </div>
-            {topJob && ranked[0] ? (
-              <>
-                <div className="recommended-company">
-                  <JobLogo company={topJob.company} />
-                  <div>
-                    <strong>{topJob.company}</strong>
-                    <span>{topJob.position}</span>
-                  </div>
-                </div>
-                <div className="recommended-fit">
-                  <ScoreRing score={ranked[0].score} size={72} />
-                  <p>
-                    내 경험과 잘 맞는 공고예요.
-                    <strong>{ranked[0].matched.length}개 역량이 연결되어 있어요.</strong>
-                  </p>
-                </div>
-                <div className="recommend-experience">
-                  <span>가장 잘 맞는 경험</span>
-                  <strong>{ranked[0].experience.title}</strong>
-                  <small>
-                    {ranked[0].matched
-                      .slice(0, 3)
-                      .map((s) => s.name)
-                      .join(" · ")}
-                  </small>
-                </div>
-                <Button asChild className="full-width">
-                  <Link href={"/jobs/" + topJob.id + "/match"}>
-                    경험 매칭 확인하기
-                    <ArrowUpRight size={15} />
+            <div className="search-field document-home-search">
+              <Search size={15} />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="기록에서 찾기…"
+                aria-label="최근 경험 문서 검색"
+              />
+            </div>
+          </div>
+          {documents.length ? (
+            <DocumentList items={documents.slice(0, 6)} compact />
+          ) : (
+            <Empty
+              icon={<FileText size={27} />}
+              title={
+                experiences.length ? "조건에 맞는 문서가 없어요." : "아직 기록된 경험이 없습니다."
+              }
+              description={
+                experiences.length
+                  ? "다른 검색어나 문서 상태로 찾아보세요."
+                  : "첫 문서를 열고 기억나는 경험부터 짧게 적어보세요."
+              }
+            >
+              {experiences.length ? (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setQuery("");
+                    setTab("all");
+                  }}
+                >
+                  전체 문서 보기
+                </Button>
+              ) : (
+                <Button asChild>
+                  <Link href="/experience/new">
+                    <PenLine size={15} />첫 경험 기록하기
                   </Link>
                 </Button>
-                <small className="demo-caption">
-                  예시 공고 · 점수는 요구 역량의 가중 커버리지입니다.
-                </small>
-              </>
-            ) : (
-              <>
-                <h3>내 경험의 가능성을 발견하세요.</h3>
-                <p className="muted">
-                  경험과 관심 있는 공고를 등록하면, 어떤 경험이 적합한지 보여드려요.
-                </p>
-                <Button asChild className="full-width">
-                  <Link href="/jobs/new">관심 공고 등록하기</Link>
-                </Button>
-              </>
-            )}
+              )}
+            </Empty>
+          )}
+          <Link href="/experience/new" className="document-add-row">
+            <PlusIcon />새 경험 문서 작성하기
+          </Link>
+          <div className="document-trust-line">
+            <ShieldCheck size={14} />
+            <span>기록한 사실만 정리합니다. 확인이 필요한 내용은 따로 표시해요.</span>
           </div>
-          <div className="checklist-panel">
-            <div className="section-heading">
-              <h3>커리어 준비 체크리스트</h3>
-              <span>
-                {
-                  [
-                    experiences.length > 0,
-                    approved > 0,
-                    jobs.length > 0,
-                    portfolios.length > 0,
-                  ].filter(Boolean).length
-                }
-                /4
-              </span>
-            </div>
-            {[
-              {
-                text: "나의 첫 경험 등록하기",
-                done: experiences.length > 0,
-                href: "/experience/new",
-              },
-              {
-                text: "경험 분석 확인하기",
-                done: approved > 0,
-                href: experiences[0] ? "/experience/" + experiences[0].id : "/experience/new",
-              },
-              { text: "관심 있는 공고 등록하기", done: jobs.length > 0, href: "/jobs/new" },
-              { text: "맞춤 포트폴리오 만들기", done: portfolios.length > 0, href: "/portfolio" },
-            ].map((item) => (
-              <Link
-                key={item.text}
-                href={item.href}
-                className={"checklist-item" + (item.done ? " done" : "")}
-              >
-                <span>{item.done && <Check size={12} />}</span>
-                {item.text}
-                <ChevronRight size={14} />
+          <section className="home-job-notes">
+            <SectionHeading title="최근 채용공고 노트" link="전체 노트" href="/jobs" />
+            {jobs.slice(0, 2).map((job) => (
+              <Link href={"/jobs/" + job.id} className="home-job-note" key={job.id}>
+                <JobLogo company={job.company} />
+                <span>
+                  <strong>{job.company}</strong>
+                  <small>{job.position}</small>
+                </span>
+                <span className="home-note-meta">{job.skills.length}개 요구 역량</span>
+                <ChevronRight size={15} />
               </Link>
             ))}
-          </div>
-          <div className="quiet-tip">
-            <BookOpen size={20} />
-            <h3>완벽한 기록이 아니어도 괜찮아요.</h3>
-            <p>
-              무엇을 했는지 짧게 적어주세요.
+            {!jobs.length && (
+              <Link href="/jobs/new" className="document-add-row">
+                <BriefcaseBusiness size={17} />
+                관심 있는 공고를 첫 노트로 남기세요
+                <ArrowUpRight size={14} />
+              </Link>
+            )}
+          </section>
+        </section>
+        <aside className="document-home-aside">
+          <div className="notebook-note">
+            <span className="note-kicker">A NOTE TO SELF</span>
+            <PenLine size={18} />
+            <h3>
+              기억은 흐려져도,
               <br />
-              빠진 내용은 천천히 채워가면 돼요.
-            </p>
+              기록은 남으니까.
+            </h3>
+            <p>오늘 해결한 문제와 내가 맡았던 역할. 작은 것부터 차근차근 적어두세요.</p>
             <Link href="/experience/new">
               오늘의 경험 남기기
               <ArrowUpRight size={14} />
             </Link>
           </div>
+          <section className="workspace-index">
+            <h3>나의 문서함</h3>
+            <Link href="/experience">
+              <FolderOpen size={16} />
+              <span>경험 기록</span>
+              <small>{experiences.length}</small>
+            </Link>
+            <Link href="/jobs">
+              <BriefcaseBusiness size={16} />
+              <span>공고 노트</span>
+              <small>{jobs.length}</small>
+            </Link>
+            <Link href="/portfolio">
+              <BookOpen size={16} />
+              <span>포트폴리오</span>
+              <small>{portfolios.length}</small>
+            </Link>
+            <div className="index-evidence">
+              <ShieldCheck size={15} />
+              {evidenceCount}개의 근거 자료가 연결되어 있어요.
+            </div>
+          </section>
+          {topJob && bestMatch && (
+            <section className="workspace-match-note">
+              <div className="note-kicker">CONNECTED STORIES</div>
+              <h3>{topJob.company}에 어울리는 기록</h3>
+              <p>{bestMatch.experience.title}</p>
+              <span>
+                <strong>{bestMatch.score}%</strong> 요구 역량 연결
+              </span>
+              <Link href={"/jobs/" + topJob.id + "/match"}>
+                근거와 매칭 이유 읽기
+                <ArrowUpRight size={14} />
+              </Link>
+              <small>요구 역량의 가중 커버리지 · 예시 공고</small>
+            </section>
+          )}
         </aside>
       </div>
     </>
   );
+}
+
+function PlusIcon() {
+  return <FilePlus2 size={17} strokeWidth={1.5} />;
 }

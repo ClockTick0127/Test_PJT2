@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { StoreProvider } from "@/lib/store";
 import "./globals.css";
+import "./document-workspace.css";
 export const metadata: Metadata = {
   title: { default: "folio — 경험이 기회가 되는 곳", template: "%s · folio" },
   description:

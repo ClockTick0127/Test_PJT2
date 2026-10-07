@@ -28,9 +28,9 @@ export function PortfolioLibrary() {
   return (
     <>
       <PageHeading
-        eyebrow="YOUR STORY, CURATED"
+        eyebrow="LIBRARY / PORTFOLIOS"
         title="나의 포트폴리오"
-        description="차곡차곡 쌓인 경험을, 지금 필요한 나의 이야기로 구성하세요."
+        description="경험 문서를 골라, 지원하는 곳에 맞는 한 권의 이야기로 엮어보세요."
         action={
           <Button asChild>
             <Link href="/jobs">

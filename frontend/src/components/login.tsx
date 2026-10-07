@@ -36,16 +36,15 @@ export function Login() {
       <div className="login-story">
         <Brand />
         <div>
-          <Badge tone="blue">YOUR CAREER, CONNECTED</Badge>
+          <Badge tone="blue">YOUR PERSONAL WORKSPACE</Badge>
           <h1>
-            작은 경험들이 모여,
+            나를 기록하는,
             <br />
-            나만의 이야기가 됩니다.
+            작은 문서 작업실.
           </h1>
           <p>
-            흩어진 경험을 정리하고,
-            <br />
-            다음 기회에 필요한 나의 강점을 찾아보세요.
+            경험을 기록하고, 필요한 순간에 찾아보세요.
+            <br />내 이야기를 쓰는 일은 작은 메모에서 시작됩니다.
           </p>
           <div className="login-story-card">
             <span className="project-icon tone-blue">

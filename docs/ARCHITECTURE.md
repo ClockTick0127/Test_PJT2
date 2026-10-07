@@ -25,7 +25,13 @@
 - `shared/src/mock-data.ts`: 데모 데이터 (실제 사용자 경험으로 오인하지 않도록 표시)
 - `tsconfig.base.json`: 세 workspace가 상속하는 공통 TypeScript 설정
 
-## 패키지 경계
+## 문서 작업실 UI
+
+경험을 문서처럼 찾고 기록할 수 있도록 따뜻한 회색 탐색 영역, 흰 본문 영역, 절제된 녹색 포인트를 사용합니다. 홈은 검색 가능한 최근 문서와 작성 시작점, 경험 라이브러리는 기본 목록 보기, 작성 화면은 제목이 먼저 보이는 문서 편집 형태로 구성합니다. 경험 상세에서는 본문과 근거·완성도 메모를 나란히 표시합니다.
+
+`frontend/src/components/document-list.tsx`는 홈과 라이브러리에서 함께 사용하는 문서 목록입니다. `frontend/src/app/document-workspace.css`는 공통 컴포넌트 및 화면의 문서 스타일과 반응형 규칙을 정의하며 루트 레이아웃에서 기본 스타일 다음에 불러옵니다. `Ctrl/Cmd + K`로 전체 검색을 열 수 있습니다. 이 UI 변경은 기존 데이터 구조와 근거 검증 규칙을 유지합니다.
+
+## 패키지 의존 관계
 
 의존 방향은 `frontend → backend/mock → shared`, `frontend → shared`입니다. 백엔드와 공통 패키지는 프론트엔드 UI나 localStorage에 의존하지 않습니다. 테스트도 백엔드 분석 로직과 공통 예시 데이터만 사용합니다.
 

@@ -34,6 +34,7 @@ import { experienceTypes, sections, type ExperienceInput, type Claim } from "@fo
 import { period } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { Badge, Empty, Progress, Skeleton } from "./ui/primitives";
+import { DocumentList } from "./document-list";
 import {
   PageHeading,
   ExperienceCard,
@@ -51,7 +52,7 @@ export function ExperienceLibrary() {
   const [status, setStatus] = useState("all");
   const [skill, setSkill] = useState("all");
   const [order, setOrder] = useState("recent");
-  const [view, setView] = useState("grid");
+  const [view, setView] = useState("list");
   const [advanced, setAdvanced] = useState(false);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -93,14 +94,13 @@ export function ExperienceLibrary() {
   return (
     <>
       <PageHeading
-        eyebrow="EXPERIENCE LIBRARY"
-        title="나의 경험 라이브러리"
-        description="모든 경험에는 가능성이 있어요. 나만의 기록을 차곡차곡 쌓아보세요."
+        eyebrow="LIBRARY / EXPERIENCES"
+        title="경험 문서"
+        description="흩어져 있던 경험을 한곳에. 필요한 순간에 다시 펼쳐보세요."
         action={
           <Button asChild>
             <Link href="/experience/new">
-              <Plus size={17} />
-              경험 추가
+              <Plus size={17} />새 경험 문서
             </Link>
           </Button>
         }
@@ -130,7 +130,7 @@ export function ExperienceLibrary() {
           <Search size={17} />
           <input
             aria-label="경험 검색"
-            placeholder="경험 제목, 역할, 기술 검색"
+            placeholder="문서 제목, 역할, 기술로 찾아보세요…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -202,7 +202,7 @@ export function ExperienceLibrary() {
       )}
       <div className="library-result-bar">
         <span>
-          총 <strong>{items.length}</strong>개의 경험
+          <strong>{items.length}</strong>개의 문서
         </span>
         <div>
           <select aria-label="정렬" value={order} onChange={(e) => setOrder(e.target.value)}>
@@ -257,27 +257,7 @@ export function ExperienceLibrary() {
           <AddExperienceCard />
         </div>
       ) : (
-        <div className="experience-table">
-          {items.map((e) => (
-            <Link key={e.id} href={"/experience/" + e.id} className="experience-table-row">
-              <ProjectIcon experience={e} small />
-              <div>
-                <strong>{e.title}</strong>
-                <small>
-                  {e.role} · {period(e.startDate, e.endDate)}
-                </small>
-              </div>
-              <div className="table-tags">
-                {e.skills.slice(0, 2).map((s) => (
-                  <Badge key={s}>{s}</Badge>
-                ))}
-              </div>
-              <span>{e.evidence.length}개 근거</span>
-              <strong className="table-score">{completeness(e)}%</strong>
-              <ArrowUpRight size={17} />
-            </Link>
-          ))}
-        </div>
+        <DocumentList items={items} />
       )}
       <VerificationNote />
     </>
@@ -345,17 +325,35 @@ export function NewExperience() {
         경험 라이브러리
       </Link>
       <PageHeading
-        eyebrow="NEW EXPERIENCE"
-        title="어떤 경험을 남기고 싶나요?"
-        description="완벽하게 적지 않아도 괜찮아요. 중요한 내용을 짧게 남겨주세요."
+        eyebrow="WRITE / NEW DOCUMENT"
+        title="새 경험 문서"
+        description="짧은 메모에서 시작하세요. 내가 한 일을 나의 언어로 남기는 곳입니다."
       />
       <div className="form-with-aside">
         <form onSubmit={submit} className="panel experience-form">
+          <div className="document-editor-bar">
+            <span>
+              <FileText size={14} />
+              경험 문서 / 새 초안
+            </span>
+            <span>작성 후 분석하고 확인하세요</span>
+          </div>
+          <label className="document-title-field">
+            경험 제목 <i>*</i>
+            <input
+              required
+              maxLength={100}
+              placeholder="제목 없는 경험 문서"
+              value={input.title}
+              onChange={(e) => field("title", e.target.value)}
+            />
+          </label>
+
           <div className="form-section-title">
             <span>01</span>
             <div>
-              <h2>경험의 시작점을 선택하세요</h2>
-              <p>먼저 기록을 모으고, 함께 내용을 확인해요.</p>
+              <h2>기록을 시작하는 방법</h2>
+              <p>직접 쓰거나, 가지고 있는 자료를 참고하세요.</p>
             </div>
           </div>
           <div className="input-methods" role="group" aria-label="입력 방법">
@@ -426,20 +424,11 @@ export function NewExperience() {
           <div className="form-section-title">
             <span>02</span>
             <div>
-              <h2>어떤 경험인가요?</h2>
-              <p>경험을 설명할 수 있는 기본 정보를 적어주세요.</p>
+              <h2>나의 경험을 기록하세요</h2>
+              <p>제목과 짧은 설명, 내가 맡은 역할부터 적어주세요.</p>
             </div>
           </div>
-          <label>
-            경험 제목 <i>*</i>
-            <input
-              required
-              maxLength={100}
-              placeholder="예: 당뇨 환자를 위한 식단 추천 서비스"
-              value={input.title}
-              onChange={(e) => field("title", e.target.value)}
-            />
-          </label>
+
           <div className="form-grid">
             <label>
               경험 유형

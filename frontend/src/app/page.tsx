@@ -74,22 +74,22 @@ export default function Landing() {
         <section className="landing-hero">
           <div className="landing-hero-copy">
             <div className="landing-kicker">
-              <span />
-              나의 경험이, 다음 기회로
+              <span />A WORKSPACE FOR YOUR STORY
             </div>
             <h1>
-              당신의 경험을 기록하면,
+              흩어진 경험을 모아,
               <br />
               <em>
-                필요한 순간에
+                나만의 문서로.
                 <br />
-                꺼내드립니다.
+                다음 기회의 시작으로.
               </em>
             </h1>
             <p>
-              흩어진 프로젝트와 활동 기록을 한곳에.
-              <br />내 경험의 강점을 발견하고, 지원하는 기업에
-              <br className="desktop-break" /> 가장 적합한 포트폴리오를 만들어보세요.
+              프로젝트, 활동, 그리고 오늘의 작은 성취까지.
+              <br />
+              경험을 기록하고, 근거와 함께 정리하세요.
+              <br className="desktop-break" /> 지원하는 곳에 맞는 이야기는 그 기록에서 시작됩니다.
             </p>
             <div className="hero-actions">
               <Button asChild size="lg">
@@ -108,91 +108,57 @@ export default function Landing() {
             </div>
           </div>
           <div className="landing-visual">
-            <div className="visual-grid" />
-            <div className="floating-evidence">
-              <ShieldCheck size={18} />
-              <div>
-                <strong>Evidence connected</strong>
-                <span>모든 이야기는 실제 경험에서</span>
-              </div>
-              <Check size={15} />
-            </div>
-            <div className="landing-mini-app">
-              <div className="mini-app-bar">
-                <span className="mini-traffic">
-                  <i />
-                  <i />
-                  <i />
+            <div className="editor-preview">
+              <div className="editor-preview-bar">
+                <span>
+                  <FileText size={12} />
+                  folio / 경험 문서
                 </span>
-                <span>My Experience Library</span>
-                <Layers3 size={14} />
+                <span>나의 기록, 나의 근거</span>
               </div>
-              <div className="mini-app-content">
-                <div className="mini-label">MY EXPERIENCE</div>
-                <h3>
-                  경험이 쌓이는 곳,
-                  <br />
-                  가능성이 시작되는 곳.
-                </h3>
-                <div className="mini-project">
-                  <div className="project-icon tone-blue">
-                    <Code2 size={23} />
-                  </div>
-                  <div>
-                    <strong>함께 만드는 웹 게임, Playground</strong>
-                    <span>Frontend Developer</span>
-                  </div>
-                  <Badge tone="green">분석 완료</Badge>
-                </div>
-                <div className="mini-tags">
-                  <Badge>React</Badge>
-                  <Badge>JavaScript</Badge>
-                  <Badge>API Integration</Badge>
-                </div>
-                <div className="mini-divider" />
-                <div className="mini-analysis">
-                  <span>
-                    <Check size={13} />
-                    Problem
+              <div className="editor-preview-body">
+                <div className="editor-preview-sidebar">
+                  <span>내 문서함</span>
+                  <span className="active">
+                    <FileText size={12} />
+                    경험 기록
                   </span>
                   <span>
-                    <Check size={13} />
-                    Action
+                    <BriefcaseBusiness size={12} />
+                    공고 노트
                   </span>
                   <span>
-                    <Check size={13} />
-                    Result
+                    <PanelsTopLeft size={12} />
+                    포트폴리오
                   </span>
                 </div>
-                <div className="mini-evidence">
-                  <GitBranch size={15} />
-                  구현 코드
-                  <FileText size={15} />
-                  프로젝트 발표자료
-                  <ShieldCheck size={14} />
-                </div>
-                <div className="mini-project secondary">
-                  <div className="project-icon tone-mint">
-                    <HeartPulse size={22} />
+                <div className="editor-preview-page">
+                  <small>EXPERIENCE NOTE / 01</small>
+                  <h3>
+                    함께 만드는 웹 게임,
+                    <br />
+                    Playground
+                  </h3>
+                  <div className="editor-preview-meta">프로젝트 · Frontend Developer</div>
+                  <h4>My Action</h4>
+                  <p>
+                    React 기반 화면을 구현하고,
+                    <br />
+                    API와 사용자 인터페이스를 연결했습니다.
+                  </p>
+                  <div className="editor-preview-source">
+                    <GitBranch size={12} />
+                    프로젝트 README · 예시 근거
+                    <ShieldCheck size={12} />
                   </div>
-                  <div>
-                    <strong>내 건강에 맞춘 한 끼, Glucare</strong>
-                    <span>Frontend · AI Service</span>
+                  <div className="editor-preview-footer">
+                    <Check size={12} />
+                    작성한 경험에서 시작하는 포트폴리오
                   </div>
                 </div>
               </div>
             </div>
-            <div className="floating-match">
-              <span className="match-logo">t</span>
-              <div>
-                <span>Frontend Developer</span>
-                <strong>내 경험과 연결된 기회</strong>
-              </div>
-              <div className="match-number">
-                81<small>%</small>
-              </div>
-            </div>
-            <div className="visual-caption">예시 경험을 담은 folio 데모</div>
+            <div className="visual-caption">문서와 근거가 함께 정리되는 folio · 예시 화면</div>
           </div>
         </section>
         <section className="landing-strip">
