@@ -23,8 +23,12 @@ export function authError(error: unknown): string {
   if (/email not confirmed/i.test(message)) return "이메일 인증을 완료한 뒤 로그인해 주세요.";
   if (/rate limit|too many|security purposes/i.test(message))
     return "요청이 많습니다. 잠시 후 다시 시도해 주세요.";
+  if (/same_password|different from the old|same as the old/i.test(message))
+    return "기존 비밀번호와 다른 비밀번호를 입력해 주세요.";
   if (/password|weak/i.test(message))
     return "비밀번호가 보안 기준에 맞지 않습니다. 더 긴 비밀번호를 사용해 주세요.";
   if (/already registered/i.test(message)) return "이미 가입한 이메일입니다. 로그인해 주세요.";
+  if (/session missing|jwt expired|missing recovery|refresh token/i.test(message))
+    return "로그인 정보가 만료되었습니다. 새 재설정 링크를 요청해 주세요.";
   return "요청을 완료하지 못했습니다. 연결 상태와 Supabase 설정을 확인하고 다시 시도해 주세요.";
 }

@@ -35,7 +35,7 @@
 
 의존 방향은 `frontend → backend/mock → shared`, `frontend → shared`입니다. 백엔드와 공통 패키지는 프론트엔드 UI나 localStorage에 의존하지 않습니다. 테스트도 백엔드 분석 로직과 공통 예시 데이터만 사용합니다.
 
-백엔드의 package exports는 `@folio/backend/mock`만 공개합니다. 이 진입점은 환경 변수, 파일 I/O, 네트워크 호출, 서버 SDK 없이 동작하며 기존 프로토타입에서는 브라우저에 번들됩니다. 분석 로직을 파일 위치만으로 서버 전용이라고 간주하지 않습니다. 서버 인증, 비밀 키, DB/LLM 클라이언트는 이 모듈이나 의존 모듈에 추가하지 않아야 합니다.
+백엔드는 `@folio/backend/mock`, `@folio/backend/account`, `@folio/backend/auth` 진입점을 공개합니다. Mock 진입점은 환경 변수, 파일 I/O, 네트워크 호출, 서버 SDK 없이 동작합니다. account와 auth는 브라우저용 Supabase SDK와 현재 사용자 세션을 사용합니다. 모두 브라우저에 번들되므로 분석 로직을 파일 위치만으로 서버 전용이라고 간주하지 않습니다. 서버 비밀 키와 LLM 클라이언트는 이 모듈이나 의존 모듈에 추가하지 않아야 합니다.
 
 독립 HTTP 서버는 없으며 계정 인증·저장은 Supabase Auth 및 Data API에 연결합니다. @folio/backend/account 저장소 어댑터는 공개 SDK와 사용자 토큰을 사용하고 RLS가 소유권을 검사합니다. 실제 API 연결 시 백엔드에 서버 전용 진입점과 API를 만들고, 프론트엔드 Mock 어댑터를 비동기 API 클라이언트로 교체합니다. Next.js 설정은 workspace 공통 루트와 로컬 TypeScript 패키지 번들을 명시합니다.
 
@@ -45,7 +45,7 @@
 
 ## 다음 단계
 
-1. Supabase 프로젝트 생성·환경 변수 설정·마이그레이션 적용 후 실제 인증과 기기 간 저장 확인. 연결 코드는 구현 완료.
+1. 온라인 Supabase 연결과 원격 DB 저장·계정 격리 검증 완료. 사용자 이메일 인증과 재로그인·기기 간 저장 확인, 다른 사용자 가입을 위한 custom SMTP 설정.
 2. Storage 업로드, PDF parser, GitHub API로 본문과 위치 정보를 확보.
 3. 백엔드 HTTP API와 서버 전용 LLM 클라이언트를 추가하고, 프론트엔드 Mock 어댑터를 API 클라이언트로 교체. JSON 스키마 검증 후 분석하고 모든 주장에 evidence_id/인용/확인 상태를 저장.
 4. URL 수집 시 SSRF 방어, 업로드 크기/MIME 검증, 비공개 자료 접근 제어 추가.
@@ -57,6 +57,10 @@ Next.js App Router, TypeScript, Tailwind CSS, Radix 기반 shadcn/ui 컴포넌�
 
 ## 계정 저장 상태
 
+공고 수정은 ID와 작성일을 유지하고 요구 역량을 다시 분석합니다. 공고 삭제는 연결된 포트폴리오의 `jobId`를 비우며 포트폴리오와 원본 경험을 유지합니다. 포트폴리오 삭제는 구성 정보만 제거합니다. 삭제는 확인창을 거치고 DB 저장 실패 시 화면 이동이나 성공 안내를 하지 않습니다.
+
+포트폴리오 표시와 편집 목록은 `@folio/shared/workspace`의 `portfolioContents`를 사용합니다. 수정으로 검토 상태가 된 경험은 본문·기술 목록·카드 표시 개수에서 제외하지만 선택 ID와 순서는 유지합니다. 편집 화면에서 검토할 수 있고 재승인하면 자동으로 다시 표시됩니다. `@folio/backend/auth`는 비밀번호 복구 메일 요청과 서버에서 검증한 현재 사용자의 비밀번호 변경을 담당합니다. `/reset-password`는 복구 세션을 확인하고 만료·불일치·요청 실패를 처리합니다.
+
 Supabase 회원가입·이메일 확인 안내·세션 복원·로그아웃과 계정별 CRUD를 구현했습니다. SQL 저장 함수는 호출자 권한으로 실행하며 관련 데이터 변경을 한 트랜잭션에 묶습니다. 경험별 기술·역량 배열, 근거 자료와 분석 주장, 여러 근거 연결을 DB에 저장합니다. 변경분만 전송하며 실패하면 성공 안내나 화면 이동을 하지 않습니다. 계정 전환 시 이전 요청의 사용자 ID를 DB에서 검사합니다.
 
-원격 Supabase 프로젝트는 아직 없으며 마이그레이션과 소유권 규칙은 로컬 PGlite PostgreSQL에서 검증했습니다. 실제 이메일 인증과 재로그인·다른 기기 조회는 프로젝트 연결 후 확인해야 합니다. 세부 설정은 [SUPABASE_SETUP.md](SUPABASE_SETUP.md)를 참고하세요.
+서울 리전의 온라인 Supabase 프로젝트 `folio-career-os`에 두 마이그레이션을 적용하고 이 작업환경의 공개 URL/키를 설정했습니다. 마이그레이션과 소유권 규칙은 로컬 PGlite와 원격 PostgreSQL에서 검증했습니다. 실제 이메일 인증과 재로그인·다른 기기 조회는 사용자 계정으로 확인해야 합니다. 세부 설정과 기본 메일 발송 제한은 [SUPABASE_SETUP.md](SUPABASE_SETUP.md)를 참고하세요.

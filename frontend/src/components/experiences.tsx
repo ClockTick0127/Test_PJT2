@@ -588,6 +588,13 @@ export function NewExperience({ id }: { id?: string }) {
               {error}
             </div>
           )}
+          {existing &&
+            data.portfolios.some((portfolio) => portfolio.experienceIds.includes(existing.id)) && (
+              <HelpNote>
+                수정한 경험은 다시 승인할 때까지 연결된 포트폴리오에서 숨겨집니다. 승인하면 기존
+                구성에 다시 표시됩니다.
+              </HelpNote>
+            )}
           <div className="form-footer">
             <span>
               <ShieldCheck size={15} />

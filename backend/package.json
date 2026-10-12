@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     "./mock": "./src/mock.ts",
-    "./account": "./src/repositories/account.ts"
+    "./account": "./src/repositories/account.ts",
+    "./auth": "./src/services/auth.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

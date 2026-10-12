@@ -1,6 +1,23 @@
 # Supabase 계정·DB 연결
 
-현재 연결 코드는 구현되어 있습니다. 아직 Supabase 프로젝트와 실제 키를 설정하지 않아 원격 가입·로그인·DB 저장은 실행하지 않았습니다. 설정 전에는 실제 가입·로그인 버튼이 비활성화되고 별도의 데모만 사용할 수 있습니다.
+이 작업환경은 2026-10-12에 온라인 Supabase에 연결했습니다. 아래 설정 절차는 새 프로젝트나 다른 기기에서 연결할 때 사용하세요.
+
+## 현재 연결 상태
+
+- 프로젝트: `folio-career-os` / `ztcmlmhsjvxzrransfyd`
+- 조직: `ClockTick0127's Org`, Free 요금제
+- 리전: 서울 (`ap-northeast-2`)
+- URL: `https://ztcmlmhsjvxzrransfyd.supabase.co`
+- 마이그레이션: `folio_initial_schema`, `folio_account_storage` 적용 완료. 아래 SQL 파일을 이 프로젝트에 다시 실행하지 마세요.
+- 앱 설정: `frontend/.env.local`에 publishable key 설정 완료. 이 파일은 Git에서 제외됩니다.
+- Site URL: `http://127.0.0.1:3000`
+- Redirect URLs: `http://127.0.0.1:3000/login`, `http://localhost:3000/login`, `http://127.0.0.1:3000/reset-password`, `http://localhost:3000/reset-password`
+
+원격 PostgreSQL에서 프로필 트리거, 경험·근거·공고·포트폴리오 저장과 조회, 계정 격리, 계정 전환 중 저장 거부, 익명 접근 차단을 검증했습니다. 테스트는 트랜잭션을 롤백했으며 테스트 계정과 문서는 남지 않았습니다. 공개 키로 Auth 설정과 Data API 접근도 확인했고, 앱 로그인 화면의 계정 기능이 활성화되었습니다. 보안 Advisor 경고는 없으며, 성능 Advisor는 RLS 함수 평가와 외래 키 인덱스의 추후 최적화를 안내합니다.
+
+성능 최적화 참고: [RLS 함수 평가](https://supabase.com/docs/guides/database/database-linter?lint=0003_auth_rls_initplan), [외래 키 인덱스](https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys). 신규 프로젝트의 미사용 인덱스 안내는 실제 사용량이 쌓인 뒤 판단합니다.
+
+실제 가입·이메일 인증·재로그인·다른 기기 조회는 아직 사용자 계정으로 검증하지 않았습니다. 현재 custom SMTP는 설정하지 않았습니다. 기본 메일 발송은 Supabase 조직 멤버 이메일로 제한되므로 처음에는 Supabase 계정에 사용하는 이메일로 가입하세요. 다른 사용자의 이메일 인증에는 별도 SMTP 설정이 필요합니다. [공식 SMTP 안내](https://supabase.com/docs/guides/auth/auth-smtp)
 
 ## 1. 프로젝트 준비
 
@@ -36,6 +53,8 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
 
 Supabase Authentication의 URL Configuration에서 개발용 Site URL을 http://127.0.0.1:3000으로 설정하고 Redirect URLs에 http://127.0.0.1:3000/login을 등록합니다. localhost 주소로도 사용할 경우 해당 주소를 별도로 등록하세요. 배포 후에는 실제 운영 주소로 변경해야 합니다.
 
+비밀번호 재설정을 위해 `http://127.0.0.1:3000/reset-password`도 등록하세요. localhost를 사용할 경우 `http://localhost:3000/reset-password`를 함께 등록합니다. 배포할 때 운영 주소의 `/login`과 `/reset-password`를 둘 다 등록하세요. 앱은 공개 키와 복구 세션으로 현재 사용자의 비밀번호를 변경하며 서버 비밀 키는 필요하지 않습니다.
+
 이메일 가입과 이메일 확인 설정을 유지하세요. 가입 결과에 세션이 없으면 앱은 인증 메일 안내를 표시합니다. 인증 링크로 /login에 돌아오면 SDK가 세션을 복원하고 계정 문서함을 불러옵니다.
 
 ## 4. 재실행 및 확인
@@ -51,13 +70,17 @@ npm run dev
 - 새 계정의 경험·공고·포트폴리오가 모두 비어 있는지 확인합니다.
 - 경험을 등록하고 분석 초안을 수정·승인합니다. 분석은 여전히 Mock입니다.
 - 경험 상세의 원문 수정과 삭제를 확인합니다.
+- 포트폴리오에 포함된 경험을 수정하면 재승인 안내가 표시되고 본문·기술·경험 수에서 제외되는지 확인합니다. 재승인하면 기존 순서로 다시 표시되어야 합니다.
+- 공고 수정은 기존 포트폴리오 연결을 유지해야 합니다. 공고를 삭제하면 포트폴리오와 경험을 유지하고 공고 연결만 해제해야 합니다.
+- 포트폴리오를 삭제해도 경험과 공고는 유지되어야 합니다.
+- 로그인 화면의 비밀번호 재설정 링크를 요청하고 메일에서 새 비밀번호를 설정합니다. 만료된 링크와 비밀번호 불일치 안내, 변경 후 재로그인을 확인합니다.
 - 로그아웃 후 재로그인하고 같은 기록이 보이는지 확인합니다.
 - 다른 브라우저에서 같은 계정으로 로그인해 저장된 기록을 확인합니다.
 - 두 번째 계정에서는 첫 계정의 문서가 보이지 않아야 합니다.
 - 사용자 B의 토큰으로 사용자 A의 ID를 직접 조회·수정해도 접근할 수 없어야 합니다.
 - 네트워크가 끊긴 상태의 저장은 성공 안내 없이 실패를 표시하고 기존 데이터는 유지해야 합니다.
 
-계정 데이터는 DB에 저장하며 데모의 localStorage 기록을 자동으로 업로드하지 않습니다. 로그인 세션 토큰은 Supabase SDK가 브라우저에서 관리합니다. 계정 문서의 공개 공유, 실시간 동기화, 비밀번호 재설정 UI, 실제 AI와 PDF/GitHub 수집은 이번 범위에 포함하지 않습니다.
+계정 데이터는 DB에 저장하며 데모의 localStorage 기록을 자동으로 업로드하지 않습니다. 로그인 세션 토큰은 Supabase SDK가 브라우저에서 관리합니다. 비밀번호 재설정 화면과 SDK 요청·오류 처리를 구현했으며, 실제 메일 수신과 비밀번호 변경은 사용자 계정으로 확인해야 합니다. 계정 문서의 공개 공유, 실시간 동기화, 실제 AI와 PDF/GitHub 수집은 이번 범위에 포함하지 않습니다.
 
 ## 검증 범위
 

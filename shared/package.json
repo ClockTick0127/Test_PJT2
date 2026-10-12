@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/types.ts",
-    "./mock-data": "./src/mock-data.ts"
+    "./mock-data": "./src/mock-data.ts",
+    "./workspace": "./src/workspace.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -15,9 +16,11 @@ import {
   X,
   Mail,
   Layers3,
+  Trash2,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { sections, type Portfolio } from "@folio/shared";
+import { portfolioContents, removePortfolio } from "@folio/shared/workspace";
 import { period } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { Badge, Empty } from "./ui/primitives";
@@ -53,9 +56,7 @@ export function PortfolioLibrary() {
         <div className="portfolio-grid">
           {data.portfolios.map((p) => {
             const job = data.jobs.find((j) => j.id === p.jobId);
-            const experiences = p.experienceIds
-              .map((id) => data.experiences.find((e) => e.id === id))
-              .filter((e) => !!e);
+            const { approved: experiences, pending } = portfolioContents(p, data.experiences);
             return (
               <Link className="portfolio-card panel" key={p.id} href={"/portfolio/" + p.id}>
                 <div className="portfolio-cover">
@@ -79,7 +80,9 @@ export function PortfolioLibrary() {
                   </Badge>
                   <h2>{p.title}</h2>
                   <p>
-                    {experiences.length}개 경험 · {p.createdAt.slice(0, 10).replaceAll("-", ".")}
+                    {experiences.length}개 승인된 경험
+                    {pending.length > 0 && ` · ${pending.length}개 재승인 필요`} ·{" "}
+                    {p.createdAt.slice(0, 10).replaceAll("-", ".")}
                   </p>
                   <span>
                     포트폴리오 살펴보기
@@ -97,12 +100,16 @@ export function PortfolioLibrary() {
 }
 export function PortfolioPreview({ id }: { id: string }) {
   const { data, update, toast, saving, mode } = useStore();
+  const router = useRouter();
   const [edit, setEdit] = useState(false);
   const [share, setShare] = useState(false);
   const [device, setDevice] = useState("desktop");
   const [addId, setAddId] = useState("");
   const [copying, setCopying] = useState(false);
   const [titleDraft, setTitleDraft] = useState<string | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+  const [titleError, setTitleError] = useState("");
   const p = data.portfolios.find((p) => p.id === id);
   if (!p)
     return (
@@ -117,9 +124,11 @@ export function PortfolioPreview({ id }: { id: string }) {
       </Empty>
     );
   const job = data.jobs.find((j) => j.id === p.jobId);
-  const experiences = p.experienceIds
-    .map((id) => data.experiences.find((e) => e.id === id))
-    .filter((e) => !!e);
+  const {
+    approved: experiences,
+    selected: editableExperiences,
+    pending,
+  } = portfolioContents(p, data.experiences);
   const skills = [...new Set(experiences.flatMap((e) => e.skills))];
   const patch = (change: Partial<Portfolio>) =>
     update((d) => ({
@@ -127,7 +136,7 @@ export function PortfolioPreview({ id }: { id: string }) {
       portfolios: d.portfolios.map((v) => (v.id === id ? { ...v, ...change } : v)),
     }));
   const move = (index: number, direction: number) => {
-    const list = [...p.experienceIds];
+    const list = editableExperiences.map((experience) => experience.id);
     [list[index], list[index + direction]] = [list[index + direction], list[index]];
     patch({ experienceIds: list });
   };
@@ -166,9 +175,38 @@ export function PortfolioPreview({ id }: { id: string }) {
               <Share2 size={15} />
               미리보기 링크
             </Button>
+            <Button
+              variant="outline"
+              disabled={saving}
+              onClick={() => {
+                setDeleteError("");
+                setDeleteOpen(true);
+              }}
+            >
+              <Trash2 size={15} />
+              포트폴리오 삭제
+            </Button>
           </div>
         }
       />
+      {pending.length > 0 && (
+        <div className="approval-notice" role="status">
+          <strong>{pending.length}개 경험의 재승인이 필요합니다.</strong>
+          <p>
+            수정한 경험은 다시 승인할 때까지 본문과 기술 목록에서 제외합니다. 승인하면 기존 순서로
+            다시 표시됩니다.
+          </p>
+          <div className="tag-row">
+            {pending.map((experience) => (
+              <Button key={experience.id} asChild variant="outline" size="sm">
+                <Link href={"/experience/" + experience.id + "/analyze"}>
+                  {experience.title} 검토하기
+                </Link>
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="preview-toolbar">
         <div>
           <Badge>
@@ -209,20 +247,34 @@ export function PortfolioPreview({ id }: { id: string }) {
             포트폴리오 제목
             <input
               value={titleDraft ?? p.title}
+              disabled={saving}
               maxLength={150}
               onChange={(e) => setTitleDraft(e.target.value)}
               onBlur={async () => {
-                if (titleDraft !== null && (await patch({ title: titleDraft })))
+                if (titleDraft === null) return;
+                if (!titleDraft.trim()) {
+                  setTitleError("포트폴리오 제목을 입력해 주세요.");
+                  return;
+                }
+                if (await patch({ title: titleDraft.trim() })) {
                   setTitleDraft(null);
+                  setTitleError("");
+                } else setTitleError("제목을 저장하지 못했습니다. 다시 시도해 주세요.");
               }}
             />
           </label>
+          {titleError && (
+            <p className="form-error" role="alert">
+              {titleError}
+            </p>
+          )}
           <div className="editor-projects">
-            {experiences.map((e, index) => (
+            {editableExperiences.map((e, index) => (
               <div key={e.id}>
                 <span className="editor-index">{index + 1}</span>
                 <ProjectIcon experience={e} small />
                 <span className="editor-project-title">{e.title}</span>
+                {e.status !== "approved" && <Badge tone="amber">재승인 필요</Badge>}
                 <Button
                   variant="ghost"
                   size="icon"
@@ -236,7 +288,7 @@ export function PortfolioPreview({ id }: { id: string }) {
                   variant="ghost"
                   size="icon"
                   aria-label={e.title + " 아래로 이동"}
-                  disabled={saving || index === experiences.length - 1}
+                  disabled={saving || index === editableExperiences.length - 1}
                   onClick={() => move(index, 1)}
                 >
                   <ArrowDown size={15} />
@@ -412,8 +464,12 @@ export function PortfolioPreview({ id }: { id: string }) {
             {!experiences.length && (
               <Empty
                 icon={<Layers3 size={25} />}
-                title="보여줄 경험을 선택해주세요."
-                description="구성 편집에서 포트폴리오에 담을 경험을 추가하세요."
+                title={pending.length ? "승인된 경험이 없습니다." : "보여줄 경험을 선택해주세요."}
+                description={
+                  pending.length
+                    ? "선택한 경험을 다시 승인하면 이곳에 표시됩니다."
+                    : "구성 편집에서 포트폴리오에 담을 경험을 추가하세요."
+                }
               />
             )}
           </section>
@@ -436,6 +492,40 @@ export function PortfolioPreview({ id }: { id: string }) {
           </footer>
         </div>
       </div>
+      <Dialog open={deleteOpen} onOpenChange={(open) => !saving && setDeleteOpen(open)}>
+        <DialogContent>
+          <DialogTitle className="dialog-title">이 포트폴리오를 삭제할까요?</DialogTitle>
+          <DialogDescription className="muted">
+            {p.title} 포트폴리오와 구성 정보를 삭제합니다. 원본 경험과 채용공고는 유지됩니다. 삭제
+            후 되돌릴 수 없습니다.
+          </DialogDescription>
+          {deleteError && (
+            <p className="form-error" role="alert">
+              {deleteError}
+            </p>
+          )}
+          <div className="dialog-actions">
+            <Button variant="outline" disabled={saving} onClick={() => setDeleteOpen(false)}>
+              취소
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={saving}
+              onClick={async () => {
+                setDeleteError("");
+                if (!(await update((current) => removePortfolio(current, id)))) {
+                  setDeleteError("포트폴리오를 삭제하지 못했습니다. 다시 시도해 주세요.");
+                  return;
+                }
+                toast("포트폴리오를 삭제했습니다.");
+                router.push("/portfolio");
+              }}
+            >
+              {saving ? "삭제 중…" : "포트폴리오 삭제"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       <Dialog open={share} onOpenChange={setShare}>
         <DialogContent>
           <DialogTitle className="dialog-title">포트폴리오 미리보기 링크</DialogTitle>

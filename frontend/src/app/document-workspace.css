@@ -2234,7 +2234,44 @@ select:focus {
   color: #5d7450;
   border-radius: 5px;
 }
+.job-detail-header .job-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.approval-notice {
+  padding: 18px 20px;
+  margin-bottom: 20px;
+  border: 1px solid #e0d7b8;
+  border-radius: 6px;
+  background: #faf7ec;
+}
+.approval-notice p {
+  margin: 8px 0 12px;
+  font-size: 13px;
+  color: #716954;
+}
+.password-reset-page {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.password-reset-page .panel {
+  width: min(100%, 440px);
+  padding: 28px;
+}
+.password-reset-page h1 {
+  font-size: 24px;
+  margin: 24px 0 12px;
+}
+.password-reset-page p {
+  margin: 12px 0;
+}
 @media (max-width: 720px) {
+  .job-detail-header .job-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
   .document-detail-actions {
     width: 100%;
     justify-content: flex-start;

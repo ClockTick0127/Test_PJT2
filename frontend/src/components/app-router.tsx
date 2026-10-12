@@ -3,6 +3,7 @@ import { useParams } from "next/navigation";
 import { AppShell } from "./app-shell";
 import { Dashboard } from "./dashboard";
 import { Login } from "./login";
+import { ResetPassword } from "./reset-password";
 import { ExperienceLibrary, NewExperience, ExperienceDetail, AnalysisScreen } from "./experiences";
 import { JobLibrary, NewJob, JobDetail, JobMatch } from "./jobs";
 import { PortfolioLibrary, PortfolioPreview } from "./portfolios";
@@ -17,6 +18,7 @@ export function AppRouter() {
   const [section, id, action] = path;
   let content: React.ReactNode;
   if (section === "login" && path.length === 1) return <Login />;
+  if (section === "reset-password" && path.length === 1) return <ResetPassword />;
   if (section === "dashboard" && path.length === 1) content = <Dashboard />;
   else if (section === "experience" && path.length === 1) content = <ExperienceLibrary />;
   else if (section === "experience" && id === "new" && path.length === 2)
@@ -29,6 +31,8 @@ export function AppRouter() {
     content = <ExperienceDetail key={id} id={id} />;
   else if (section === "jobs" && path.length === 1) content = <JobLibrary />;
   else if (section === "jobs" && id === "new" && path.length === 2) content = <NewJob />;
+  else if (section === "jobs" && id && action === "edit" && path.length === 3)
+    content = <NewJob key={id} id={id} />;
   else if (section === "jobs" && id && action === "match" && path.length === 3)
     content = <JobMatch key={id} id={id} />;
   else if (section === "jobs" && id && path.length === 2) content = <JobDetail key={id} id={id} />;

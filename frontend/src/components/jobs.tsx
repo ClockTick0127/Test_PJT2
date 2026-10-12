@@ -18,10 +18,14 @@ import {
   ChevronUp,
   PanelsTopLeft,
   CircleAlert,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { parseJob, parseResponsibilities, rankExperiences, skillGap } from "@/lib/mock-analysis";
 import type { Job } from "@folio/shared";
+import { removeJob } from "@folio/shared/workspace";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Badge, Empty, Progress } from "./ui/primitives";
 import {
@@ -143,19 +147,31 @@ export function JobLibrary() {
     </>
   );
 }
-export function NewJob() {
+export function NewJob({ id }: { id?: string }) {
   const router = useRouter();
-  const { update, toast } = useStore();
-  const [company, setCompany] = useState("");
-  const [position, setPosition] = useState("");
-  const [url, setUrl] = useState("");
-  const [description, setDescription] = useState("");
-  const [extra, setExtra] = useState("");
+  const { data, update, toast } = useStore();
+  const existing = id ? data.jobs.find((job) => job.id === id) : undefined;
+  const [company, setCompany] = useState(existing?.company || "");
+  const [position, setPosition] = useState(existing?.position || "");
+  const [url, setUrl] = useState(existing?.url || "");
+  const [description, setDescription] = useState(existing?.description || "");
+  const [extra, setExtra] = useState(() => {
+    if (!existing) return "";
+    const parsed = parseJob(existing.description, "");
+    return existing.skills
+      .filter((skill) => !parsed.some((item) => item.name === skill.name))
+      .map((skill) => skill.name)
+      .join(", ");
+  });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    if (!company.trim() || !position.trim() || !description.trim()) {
+      setError("기업 이름, 지원 직무, 공고 본문을 입력해 주세요.");
+      return;
+    }
     if (url && !/^https?:\/\//.test(url)) {
       setError("http 또는 https로 시작하는 공고 URL을 입력해 주세요.");
       return;
@@ -169,23 +185,34 @@ export function NewJob() {
     }
     setLoading(true);
     const job: Job = {
-      id: crypto.randomUUID(),
+      ...existing,
+      id: existing?.id || crypto.randomUUID(),
       company: company.trim(),
       position: position.trim(),
       url,
       description,
       skills,
       responsibilities: parseResponsibilities(description),
-      createdAt: new Date().toISOString(),
+      createdAt: existing?.createdAt || new Date().toISOString(),
     };
-    if (!(await update((d) => ({ ...d, jobs: [job, ...d.jobs] })))) {
+    if (
+      !(await update((d) => ({
+        ...d,
+        jobs: existing ? d.jobs.map((item) => (item.id === id ? job : item)) : [job, ...d.jobs],
+      })))
+    ) {
       setLoading(false);
       setError("공고를 저장하지 못했습니다. 다시 시도해 주세요.");
       return;
     }
-    toast("공고의 요구 역량이 정리되었습니다.");
+    toast(
+      existing
+        ? "공고를 수정하고 요구 역량을 다시 정리했습니다."
+        : "공고의 요구 역량이 정리되었습니다.",
+    );
     router.push("/jobs/" + job.id);
   };
+  if (id && !existing) return <JobMissing />;
   return (
     <>
       <Link href="/jobs" className="back-link">
@@ -193,9 +220,13 @@ export function NewJob() {
         지원 공고
       </Link>
       <PageHeading
-        eyebrow="NEW JOB POSTING"
-        title="어떤 기회에 도전하고 싶나요?"
-        description="채용공고를 넣으면, 필요한 역량과 어울리는 경험을 함께 살펴볼 수 있어요."
+        eyebrow={existing ? "EDIT JOB POSTING" : "NEW JOB POSTING"}
+        title={existing ? "공고 내용 수정" : "어떤 기회에 도전하고 싶나요?"}
+        description={
+          existing
+            ? "저장하면 요구 역량과 경험 매칭을 다시 계산합니다. 연결된 포트폴리오는 유지됩니다."
+            : "채용공고를 넣으면, 필요한 역량과 어울리는 경험을 함께 살펴볼 수 있어요."
+        }
       />
       <div className="form-with-aside">
         <form className="panel job-form" onSubmit={submit}>
@@ -282,7 +313,7 @@ export function NewJob() {
             </span>
             <Button disabled={loading}>
               <Sparkles size={17} />
-              {loading ? "분석 중…" : "공고 분석하기"}
+              {loading ? "저장 중…" : existing ? "수정하고 다시 분석하기" : "공고 분석하기"}
             </Button>
           </div>
         </form>
@@ -335,8 +366,11 @@ function JobMissing() {
   );
 }
 export function JobDetail({ id }: { id: string }) {
-  const { data } = useStore();
+  const { data, update, toast, saving } = useStore();
+  const router = useRouter();
   const [tab, setTab] = useState("analysis");
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
   const job = data.jobs.find((j) => j.id === id);
   if (!job) return <JobMissing />;
   const ranked = rankExperiences(data.experiences, job);
@@ -359,14 +393,33 @@ export function JobDetail({ id }: { id: string }) {
           <h1>{job.position}</h1>
           <p>어떤 역량을 찾고 있는지, 내 경험은 어떻게 연결되는지 확인하세요.</p>
         </div>
-        {job.url && (
+        <div className="heading-actions job-actions">
+          {job.url && (
+            <Button asChild variant="outline">
+              <a href={job.url} target="_blank" rel="noopener noreferrer">
+                <ExternalLink size={15} />
+                원본 공고
+              </a>
+            </Button>
+          )}
           <Button asChild variant="outline">
-            <a href={job.url} target="_blank" rel="noopener noreferrer">
-              <ExternalLink size={15} />
-              원본 공고
-            </a>
+            <Link href={"/jobs/" + id + "/edit"}>
+              <Pencil size={15} />
+              공고 수정
+            </Link>
           </Button>
-        )}
+          <Button
+            variant="outline"
+            disabled={saving}
+            onClick={() => {
+              setDeleteError("");
+              setDeleteOpen(true);
+            }}
+          >
+            <Trash2 size={15} />
+            공고 삭제
+          </Button>
+        </div>
       </div>
       <div className="detail-tabs" role="tablist" aria-label="공고 보기">
         <button
@@ -523,6 +576,40 @@ export function JobDetail({ id }: { id: string }) {
           )}
         </aside>
       </div>
+      <Dialog open={deleteOpen} onOpenChange={(open) => !saving && setDeleteOpen(open)}>
+        <DialogContent>
+          <DialogTitle className="dialog-title">이 공고를 삭제할까요?</DialogTitle>
+          <DialogDescription className="muted">
+            {job.company} · {job.position} 공고와 요구 역량을 삭제합니다. 연결된 포트폴리오와 경험은
+            유지하고 공고 연결만 해제합니다. 삭제 후 되돌릴 수 없습니다.
+          </DialogDescription>
+          {deleteError && (
+            <p className="form-error" role="alert">
+              {deleteError}
+            </p>
+          )}
+          <div className="dialog-actions">
+            <Button variant="outline" disabled={saving} onClick={() => setDeleteOpen(false)}>
+              취소
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={saving}
+              onClick={async () => {
+                setDeleteError("");
+                if (!(await update((current) => removeJob(current, id)))) {
+                  setDeleteError("공고를 삭제하지 못했습니다. 다시 시도해 주세요.");
+                  return;
+                }
+                toast("공고를 삭제했습니다. 포트폴리오는 유지됩니다.");
+                router.push("/jobs");
+              }}
+            >
+              {saving ? "삭제 중…" : "공고 삭제"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
@@ -550,6 +637,19 @@ export function JobMatch({ id }: { id: string }) {
   const create = async () => {
     if (!selected.length) {
       setError("포트폴리오에 포함할 경험을 선택해주세요.");
+      return;
+    }
+    if (
+      selected.some(
+        (selectedId) =>
+          !data.experiences.some(
+            (experience) => experience.id === selectedId && experience.status === "approved",
+          ),
+      )
+    ) {
+      setError(
+        "선택한 경험의 승인 상태가 바뀌었습니다. 경험을 다시 승인하거나 선택을 변경해 주세요.",
+      );
       return;
     }
     const portfolioId = crypto.randomUUID();

@@ -323,6 +323,74 @@ test("PostgreSQL transactions, account isolation, references, and cascade deleti
       );
     });
     await become(userA);
+    await t.test(
+      "editing an included experience retains its selection while awaiting reapproval",
+      async () => {
+        await apply({ ...blank, experiences: [{ ...experienceA, status: "review" }] });
+        assert.deepEqual((await db.query("select status from public.experiences")).rows, [
+          { status: "review" },
+        ]);
+        assert.deepEqual(
+          (await db.query("select experience_id,sort_order from public.portfolio_experiences"))
+            .rows,
+          [{ experience_id: experienceA.id, sort_order: 0 }],
+        );
+        await apply({ ...blank, experiences: [{ ...experienceA, status: "approved" }] });
+        assert.deepEqual((await db.query("select status from public.experiences")).rows, [
+          { status: "approved" },
+        ]);
+        assert.deepEqual(
+          (await db.query("select experience_id,sort_order from public.portfolio_experiences"))
+            .rows,
+          [{ experience_id: experienceA.id, sort_order: 0 }],
+        );
+      },
+    );
+    await t.test("job edits retain portfolio links and persist new requirements", async () => {
+      await apply({
+        ...blank,
+        jobs: [
+          {
+            ...job,
+            position: "수정한 직무",
+            skills: [{ name: "TypeScript", importance: 2, kind: "preferred" }],
+          },
+        ],
+      });
+      assert.deepEqual((await db.query("select position from public.job_postings")).rows, [
+        { position: "수정한 직무" },
+      ]);
+      assert.deepEqual((await db.query("select skill,requirement from public.job_skills")).rows, [
+        { skill: "TypeScript", requirement: "preferred" },
+      ]);
+      assert.deepEqual((await db.query("select job_id from public.portfolios")).rows, [
+        { job_id: job.id },
+      ]);
+    });
+    await t.test(
+      "deleting a job detaches portfolios without removing their experiences",
+      async () => {
+        await apply({ ...blank, deletedJobs: [job.id], portfolios: [{ ...portfolio, jobId: "" }] });
+        assert.equal((await db.query("select id from public.job_postings")).rows.length, 0);
+        assert.equal((await db.query("select skill from public.job_skills")).rows.length, 0);
+        assert.deepEqual((await db.query("select job_id from public.portfolios")).rows, [
+          { job_id: null },
+        ]);
+        assert.equal(
+          (await db.query("select experience_id from public.portfolio_experiences")).rows.length,
+          1,
+        );
+      },
+    );
+    await t.test("deleting a portfolio preserves source experiences", async () => {
+      await apply({ ...blank, deletedPortfolios: [portfolio.id] });
+      assert.equal((await db.query("select id from public.portfolios")).rows.length, 0);
+      assert.equal(
+        (await db.query("select experience_id from public.portfolio_experiences")).rows.length,
+        0,
+      );
+      assert.equal((await db.query("select id from public.experiences")).rows.length, 1);
+    });
     await t.test("deletion cascades only through the current user's records", async () => {
       await apply({ ...blank, deletedExperiences: [experienceA.id] });
       assert.equal((await db.query("select id from public.evidence")).rows.length, 0);

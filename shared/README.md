@@ -4,5 +4,6 @@
 
 - `@folio/shared`: `src/types.ts`의 타입과 공통 상수
 - `@folio/shared/mock-data`: `src/mock-data.ts`의 예시 경험·공고와 초기 데이터
+- `@folio/shared/workspace`: 포트폴리오의 승인된 경험 선택과 공고·포트폴리오 삭제 시 문서 연결 처리
 
 프로젝트 루트에서 `npm run typecheck --workspace @folio/shared`로 검증합니다. 별도 복사나 빌드 없이 npm workspace를 통해 같은 TypeScript 소스를 사용합니다.

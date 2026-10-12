@@ -6,13 +6,15 @@ import { Brand } from "./app-shell";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/primitives";
 import { useStore } from "@/lib/store";
-import { authError } from "@/lib/supabase";
+import { authError, getSupabase } from "@/lib/supabase";
+import { requestPasswordReset } from "@folio/backend/auth";
 export function Login() {
   const router = useRouter();
   const params = useSearchParams();
   const { data, startDemo, signIn, signUp, mode, ready, configured, accountLoaded, storageError } =
     useStore();
   const [signup, setSignup] = useState(params.get("mode") === "signup");
+  const [recovery, setRecovery] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -24,7 +26,7 @@ export function Login() {
   }, [ready, mode, accountLoaded, router]);
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (signup && !name.trim()) {
+    if (!recovery && signup && !name.trim()) {
       setError("이름을 입력해 주세요.");
       return;
     }
@@ -32,6 +34,15 @@ export function Login() {
     setError("");
     setMessage("");
     try {
+      if (recovery) {
+        const client = getSupabase();
+        if (!client) throw new Error("Supabase is not configured");
+        await requestPasswordReset(client, email, window.location.origin + "/reset-password");
+        setMessage(
+          "가입된 이메일이라면 비밀번호 재설정 링크를 보내드립니다. 받은 메일의 링크를 열어주세요.",
+        );
+        return;
+      }
       if (signup) {
         const result = await signUp(name.trim(), email.trim(), password);
         if (result === "verify") {
@@ -97,25 +108,41 @@ export function Login() {
         </div>
         <div className="login-form">
           <Badge tone="blue">{configured ? "ACCOUNT WORKSPACE" : "CONNECTION REQUIRED"}</Badge>
-          <h2>{signup ? "첫 이야기를 시작해볼까요?" : "다시 만나 반가워요."}</h2>
+          <h2>
+            {recovery
+              ? "비밀번호를 재설정하세요."
+              : signup
+                ? "첫 이야기를 시작해볼까요?"
+                : "다시 만나 반가워요."}
+          </h2>
           <p>
-            {signup ? "나만의 커리어 공간을 만들어보세요." : "나의 경험과 다음 기회를 연결하세요."}
+            {recovery
+              ? "가입한 이메일로 재설정 링크를 보내드립니다."
+              : signup
+                ? "나만의 커리어 공간을 만들어보세요."
+                : "나의 경험과 다음 기회를 연결하세요."}
           </p>
           <div className="login-tabs">
             <button
+              disabled={loading}
               className={!signup ? "active" : ""}
               onClick={() => {
                 setSignup(false);
+                setRecovery(false);
                 setError("");
+                setMessage("");
               }}
             >
               로그인
             </button>
             <button
+              disabled={loading}
               className={signup ? "active" : ""}
               onClick={() => {
                 setSignup(true);
+                setRecovery(false);
                 setError("");
+                setMessage("");
               }}
             >
               회원가입
@@ -128,7 +155,7 @@ export function Login() {
                 있으며, 아래 데모는 바로 사용할 수 있어요.
               </div>
             )}
-            {signup && (
+            {signup && !recovery && (
               <label>
                 이름
                 <input
@@ -152,25 +179,29 @@ export function Login() {
                 autoComplete="email"
               />
             </label>
-            <label>
-              비밀번호
-              <input
-                type="password"
-                required
-                minLength={signup ? 8 : undefined}
-                maxLength={128}
-                autoComplete={signup ? "new-password" : "current-password"}
-                placeholder={signup ? "8자 이상 입력하세요" : "비밀번호를 입력하세요"}
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-              />
-            </label>
+            {!recovery && (
+              <label>
+                비밀번호
+                <input
+                  type="password"
+                  required
+                  minLength={signup ? 8 : undefined}
+                  maxLength={128}
+                  autoComplete={signup ? "new-password" : "current-password"}
+                  placeholder={signup ? "8자 이상 입력하세요" : "비밀번호를 입력하세요"}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                />
+              </label>
+            )}
             <div className="help-note">
               <ShieldCheck size={17} />
               <span>
-                {signup
-                  ? "새 계정은 빈 문서함으로 시작합니다. 이메일 인증이 필요한 경우 인증 링크를 보내드립니다."
-                  : "이메일과 비밀번호로 로그인하면 저장한 기록을 다시 불러옵니다."}
+                {recovery
+                  ? "메일의 링크를 열면 새 비밀번호를 설정할 수 있습니다."
+                  : signup
+                    ? "새 계정은 빈 문서함으로 시작합니다. 이메일 인증이 필요한 경우 인증 링크를 보내드립니다."
+                    : "이메일과 비밀번호로 로그인하면 저장한 기록을 다시 불러옵니다."}
               </span>
             </div>
             {error && (
@@ -184,10 +215,32 @@ export function Login() {
               </p>
             )}
             <Button className="full-width" disabled={loading || !configured || !ready}>
-              {loading ? "시작하는 중…" : signup ? "회원가입" : "로그인"}
+              {loading
+                ? "요청 중…"
+                : recovery
+                  ? "재설정 링크 보내기"
+                  : signup
+                    ? "회원가입"
+                    : "로그인"}
               <ArrowUpRight size={16} />
             </Button>
           </form>
+          {!signup && (
+            <Button
+              type="button"
+              variant="ghost"
+              className="full-width"
+              disabled={loading}
+              onClick={() => {
+                setRecovery(!recovery);
+                setPassword("");
+                setMessage("");
+                setError("");
+              }}
+            >
+              {recovery ? "로그인으로 돌아가기" : "비밀번호를 잊으셨나요?"}
+            </Button>
+          )}
           {mode !== "guest" && (
             <Button
               variant="outline"
