@@ -153,7 +153,7 @@ export function NewJob() {
   const [extra, setExtra] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     if (url && !/^https?:\/\//.test(url)) {
@@ -178,7 +178,11 @@ export function NewJob() {
       responsibilities: parseResponsibilities(description),
       createdAt: new Date().toISOString(),
     };
-    update((d) => ({ ...d, jobs: [job, ...d.jobs] }));
+    if (!(await update((d) => ({ ...d, jobs: [job, ...d.jobs] })))) {
+      setLoading(false);
+      setError("공고를 저장하지 못했습니다. 다시 시도해 주세요.");
+      return;
+    }
     toast("공고의 요구 역량이 정리되었습니다.");
     router.push("/jobs/" + job.id);
   };
@@ -523,7 +527,7 @@ export function JobDetail({ id }: { id: string }) {
   );
 }
 export function JobMatch({ id }: { id: string }) {
-  const { data, update, toast } = useStore();
+  const { data, update, toast, saving } = useStore();
   const router = useRouter();
   const job = data.jobs.find((j) => j.id === id);
   const ranked = job ? rankExperiences(data.experiences, job) : [];
@@ -543,27 +547,32 @@ export function JobMatch({ id }: { id: string }) {
     );
     setError("");
   };
-  const create = () => {
+  const create = async () => {
     if (!selected.length) {
       setError("포트폴리오에 포함할 경험을 선택해주세요.");
       return;
     }
     const portfolioId = crypto.randomUUID();
-    update((d) => ({
-      ...d,
-      portfolios: [
-        {
-          id: portfolioId,
-          jobId: id,
-          title: job.company + " · " + job.position,
-          slug: "portfolio-" + portfolioId.slice(0, 8),
-          visibility: "private",
-          experienceIds: selected,
-          createdAt: new Date().toISOString(),
-        },
-        ...d.portfolios,
-      ],
-    }));
+    if (
+      !(await update((d) => ({
+        ...d,
+        portfolios: [
+          {
+            id: portfolioId,
+            jobId: id,
+            title: job.company + " · " + job.position,
+            slug: "portfolio-" + portfolioId.slice(0, 8),
+            visibility: "private",
+            experienceIds: selected,
+            createdAt: new Date().toISOString(),
+          },
+          ...d.portfolios,
+        ],
+      })))
+    ) {
+      setError("포트폴리오를 저장하지 못했습니다. 다시 시도해 주세요.");
+      return;
+    }
     toast("선택한 경험으로 포트폴리오 초안을 만들었습니다.");
     router.push("/portfolio/" + portfolioId);
   };
@@ -728,7 +737,7 @@ export function JobMatch({ id }: { id: string }) {
                 {error}
               </p>
             )}
-            <Button onClick={create} className="full-width" disabled={!selected.length}>
+            <Button onClick={create} className="full-width" disabled={saving || !selected.length}>
               <Sparkles size={16} />
               포트폴리오 만들기
             </Button>

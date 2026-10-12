@@ -2223,3 +2223,26 @@ select:focus {
     max-width: none;
   }
 }
+
+.document-detail-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.auth-confirmation {
+  padding: 12px 14px;
+  background: #f0f5e9;
+  color: #5d7450;
+  border-radius: 5px;
+}
+@media (max-width: 720px) {
+  .document-detail-actions {
+    width: 100%;
+    justify-content: flex-start;
+    margin: 5px 0;
+  }
+  .document-detail-actions > .button {
+    min-height: 34px;
+    padding: 0 10px;
+    font-size: 10px;
+  }
+}

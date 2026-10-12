@@ -27,6 +27,7 @@ import {
   Pencil,
   X,
   ChevronDown,
+  Trash2,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { analyzeExperience, completeness } from "@/lib/mock-analysis";
@@ -35,6 +36,7 @@ import { period } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { Badge, Empty, Progress, Skeleton } from "./ui/primitives";
 import { DocumentList } from "./document-list";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "./ui/dialog";
 import {
   PageHeading,
   ExperienceCard,
@@ -279,17 +281,41 @@ const defaultInput: ExperienceInput = {
   github: "",
   fileName: "",
 };
-export function NewExperience() {
-  const { update, toast } = useStore();
+export function NewExperience({ id }: { id?: string }) {
+  const { data, update, toast } = useStore();
   const router = useRouter();
-  const [input, setInput] = useState<ExperienceInput>(defaultInput);
+  const existing = id ? data.experiences.find((experience) => experience.id === id) : undefined;
+  const [input, setInput] = useState<ExperienceInput>(() =>
+    existing
+      ? {
+          ...defaultInput,
+          title: existing.title,
+          type: existing.type,
+          organization: existing.organization,
+          startDate: existing.startDate,
+          endDate: existing.endDate,
+          description: existing.description,
+          role: existing.role,
+          skills: existing.skills.join(", "),
+          ...Object.fromEntries(
+            existing.claims
+              .filter((claim) => claim.section !== "role")
+              .map((claim) => [
+                claim.section,
+                claim.content === "사용자 확인 필요" ? "" : claim.content,
+              ]),
+          ),
+          github: existing.evidence.find((source) => source.type === "github")?.url || "",
+        }
+      : defaultInput,
+  );
   const [method, setMethod] = useState("manual");
-  const [more, setMore] = useState(false);
+  const [more, setMore] = useState(Boolean(existing));
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const field = (key: keyof ExperienceInput, value: string) =>
     setInput((v) => ({ ...v, [key]: value }));
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     if (!input.title.trim() || !input.description.trim() || !input.role.trim()) {
@@ -313,11 +339,41 @@ export function NewExperience() {
       return;
     }
     setSubmitting(true);
-    const experience = analyzeExperience(input);
-    update((d) => ({ ...d, experiences: [experience, ...d.experiences] }));
+    const draft = analyzeExperience(input);
+    const experience = existing
+      ? {
+          ...draft,
+          id: existing.id,
+          createdAt: existing.createdAt,
+          color: existing.color,
+          icon: existing.icon,
+          isDemo: existing.isDemo,
+          evidence: [
+            ...draft.evidence,
+            ...existing.evidence.filter(
+              (source) =>
+                source.type !== "manual" &&
+                !draft.evidence.some((next) => next.url && next.url === source.url),
+            ),
+          ],
+        }
+      : draft;
+    if (
+      !(await update((d) => ({
+        ...d,
+        experiences: existing
+          ? d.experiences.map((item) => (item.id === id ? experience : item))
+          : [experience, ...d.experiences],
+      })))
+    ) {
+      setSubmitting(false);
+      setError("초안을 저장하지 못했습니다. 입력한 내용을 유지했으니 다시 시도해 주세요.");
+      return;
+    }
     toast("경험이 초안으로 저장되었습니다.");
     router.push("/experience/" + experience.id + "/analyze");
   };
+  if (id && !existing) return <NotFoundExperience />;
   return (
     <>
       <Link className="back-link" href="/experience">
@@ -326,7 +382,7 @@ export function NewExperience() {
       </Link>
       <PageHeading
         eyebrow="WRITE / NEW DOCUMENT"
-        title="새 경험 문서"
+        title={existing ? "경험 원문 수정" : "새 경험 문서"}
         description="짧은 메모에서 시작하세요. 내가 한 일을 나의 언어로 남기는 곳입니다."
       />
       <div className="form-with-aside">
@@ -539,7 +595,7 @@ export function NewExperience() {
             </span>
             <Button disabled={submitting}>
               <Sparkles size={17} />
-              {submitting ? "초안 저장 중…" : "경험 분석하기"}
+              {submitting ? "초안 저장 중…" : existing ? "수정하고 다시 확인하기" : "경험 분석하기"}
             </Button>
           </div>
         </form>
@@ -603,7 +659,7 @@ function NotFoundExperience() {
   );
 }
 export function AnalysisScreen({ id }: { id: string }) {
-  const { data, update, toast } = useStore();
+  const { data, update, toast, saving } = useStore();
   const router = useRouter();
   const original = data.experiences.find((e) => e.id === id);
   const [step, setStep] = useState(0);
@@ -616,12 +672,12 @@ export function AnalysisScreen({ id }: { id: string }) {
     return () => clearInterval(t);
   }, [id]);
   if (!original) return <NotFoundExperience />;
-  const approve = () => {
+  const approve = async () => {
     if (!confirmed) {
       setError("실제로 수행한 경험인지 확인해 주세요.");
       return;
     }
-    const manualId = id + "-review";
+    const manualId = crypto.randomUUID();
     const edited = claims.map((c) =>
       c.content.trim() && c.content !== "사용자 확인 필요"
         ? {
@@ -643,20 +699,25 @@ export function AnalysisScreen({ id }: { id: string }) {
         .join("\n"),
       status: "user_confirmed",
     });
-    update((d) => ({
-      ...d,
-      experiences: d.experiences.map((e) =>
-        e.id === id
-          ? {
-              ...e,
-              claims: edited,
-              role: edited.find((claim) => claim.section === "role")?.content || e.role,
-              evidence,
-              status: "approved",
-            }
-          : e,
-      ),
-    }));
+    if (
+      !(await update((d) => ({
+        ...d,
+        experiences: d.experiences.map((e) =>
+          e.id === id
+            ? {
+                ...e,
+                claims: edited,
+                role: edited.find((claim) => claim.section === "role")?.content || e.role,
+                evidence,
+                status: "approved",
+              }
+            : e,
+        ),
+      })))
+    ) {
+      setError("검토 내용을 저장하지 못했습니다. 다시 시도해 주세요.");
+      return;
+    }
     toast("확인한 경험이 라이브러리에 저장되었습니다.");
     router.push("/experience/" + id);
   };
@@ -802,7 +863,7 @@ export function AnalysisScreen({ id }: { id: string }) {
                   {error}
                 </p>
               )}
-              <Button onClick={approve} disabled={!confirmed}>
+              <Button onClick={approve} disabled={!confirmed || saving}>
                 <CheckCheck size={17} />
                 확인하고 라이브러리에 저장
               </Button>
@@ -826,7 +887,9 @@ export function AnalysisScreen({ id }: { id: string }) {
   );
 }
 export function ExperienceDetail({ id }: { id: string }) {
-  const { data } = useStore();
+  const { data, update, toast, saving } = useStore();
+  const router = useRouter();
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [tab, setTab] = useState("analysis");
   const e = data.experiences.find((v) => v.id === id);
   if (!e) return <NotFoundExperience />;
@@ -849,12 +912,28 @@ export function ExperienceDetail({ id }: { id: string }) {
           <h1>{e.title}</h1>
           <p>{e.description}</p>
         </div>
-        <Button variant="outline" asChild>
-          <Link href={"/experience/" + id + "/analyze"}>
-            <Pencil size={15} />
-            {e.status === "review" ? "분석 검토하기" : "내용 수정"}
-          </Link>
-        </Button>
+        <div className="heading-actions document-detail-actions">
+          <Button variant="outline" asChild>
+            <Link href={"/experience/" + id + "/edit"}>
+              <Pencil size={15} />
+              원문 수정
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href={"/experience/" + id + "/analyze"}>
+              <Pencil size={15} />
+              {e.status === "review" ? "분석 검토하기" : "분석 수정"}
+            </Link>
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="경험 삭제"
+            onClick={() => setDeleteOpen(true)}
+          >
+            <Trash2 size={16} />
+          </Button>
+        </div>
       </div>
       <div className="experience-metadata">
         <span>
@@ -1030,6 +1109,41 @@ export function ExperienceDetail({ id }: { id: string }) {
         </aside>
       </div>
       <VerificationNote />
+      <Dialog open={deleteOpen} onOpenChange={(open) => !saving && setDeleteOpen(open)}>
+        <DialogContent>
+          <DialogTitle className="dialog-title">이 경험 문서를 삭제할까요?</DialogTitle>
+          <DialogDescription className="muted">
+            {e.title} 문서와 연결된 근거·분석을 삭제하고 포트폴리오에서 제외합니다. 삭제 후 되돌릴
+            수 없습니다.
+          </DialogDescription>
+          <div className="dialog-actions">
+            <Button variant="outline" disabled={saving} onClick={() => setDeleteOpen(false)}>
+              취소
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={saving}
+              onClick={async () => {
+                if (
+                  !(await update((current) => ({
+                    ...current,
+                    experiences: current.experiences.filter((item) => item.id !== id),
+                    portfolios: current.portfolios.map((portfolio) => ({
+                      ...portfolio,
+                      experienceIds: portfolio.experienceIds.filter((item) => item !== id),
+                    })),
+                  })))
+                )
+                  return;
+                toast("경험 문서를 삭제했습니다.");
+                router.push("/experience");
+              }}
+            >
+              {saving ? "삭제 중…" : "문서 삭제"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

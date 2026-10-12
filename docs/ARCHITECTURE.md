@@ -2,7 +2,7 @@
 
 ## 첫 개발 범위
 
-11개 화면의 반응형 프로토타입을 먼저 완성한다. 외부 AI, Supabase 인증, PDF 파싱, GitHub 수집은 연결하지 않는다. 데모 계정과 예시 경험은 명확히 표시하며 브라우저 localStorage에 저장한다. 이 저장소는 해당 기기에서만 동작하며 보안 인증이나 서버 공유 기능을 대신하지 않는다.
+11개 화면의 반응형 프로토타입을 먼저 완성한다. AI, PDF 파싱, GitHub 수집은 아직 Mock이다. Supabase 인증과 계정 저장 어댑터는 구현되어 있으며 프로젝트 설정 후 사용할 수 있다. 예시 경험은 실제 계정과 분리된 데모 문서함에만 두고 localStorage에 저장한다. 실제 계정의 프로필·경험·공고·포트폴리오는 Supabase DB에 저장한다. 이 저장소는 해당 기기에서만 동작하며 보안 인증이나 서버 공유 기능을 대신하지 않는다.
 
 ## 데이터 흐름
 
@@ -37,15 +37,15 @@
 
 백엔드의 package exports는 `@folio/backend/mock`만 공개합니다. 이 진입점은 환경 변수, 파일 I/O, 네트워크 호출, 서버 SDK 없이 동작하며 기존 프로토타입에서는 브라우저에 번들됩니다. 분석 로직을 파일 위치만으로 서버 전용이라고 간주하지 않습니다. 서버 인증, 비밀 키, DB/LLM 클라이언트는 이 모듈이나 의존 모듈에 추가하지 않아야 합니다.
 
-현재는 독립 HTTP 서버가 없으며 데이터를 전송하지 않습니다. 실제 API 연결 시 백엔드에 서버 전용 진입점과 API를 만들고, 프론트엔드 Mock 어댑터를 비동기 API 클라이언트로 교체합니다. Next.js 설정은 workspace 공통 루트와 로컬 TypeScript 패키지 번들을 명시합니다.
+독립 HTTP 서버는 없으며 계정 인증·저장은 Supabase Auth 및 Data API에 연결합니다. @folio/backend/account 저장소 어댑터는 공개 SDK와 사용자 토큰을 사용하고 RLS가 소유권을 검사합니다. 실제 API 연결 시 백엔드에 서버 전용 진입점과 API를 만들고, 프론트엔드 Mock 어댑터를 비동기 API 클라이언트로 교체합니다. Next.js 설정은 workspace 공통 루트와 로컬 TypeScript 패키지 번들을 명시합니다.
 
 브라우저 저장소 키 `folio-career-os-v1`과 데이터 형식은 유지합니다. 폴더 리팩토링 이후에도 같은 브라우저와 주소에서 기존 경험·공고·포트폴리오를 읽습니다.
 
-프론트엔드 환경 변수 예시는 `frontend/.env.example`, 서버 전용 키 예시는 `backend/.env.example`에 둡니다. 현재 Mock 분석은 어느 파일도 읽지 않습니다.
+프론트엔드 환경 변수 예시는 `frontend/.env.example`, 서버 전용 키 예시는 `backend/.env.example`에 둡니다. Mock 분석은 어느 파일도 읽지 않습니다. 인증 SDK는 프론트엔드의 공개 URL/키만 읽습니다. 서버 서비스 키는 이번 계정 저장에 사용하지 않습니다.
 
 ## 다음 단계
 
-1. Supabase Auth와 repository adapter로 브라우저 저장소 교체.
+1. Supabase 프로젝트 생성·환경 변수 설정·마이그레이션 적용 후 실제 인증과 기기 간 저장 확인. 연결 코드는 구현 완료.
 2. Storage 업로드, PDF parser, GitHub API로 본문과 위치 정보를 확보.
 3. 백엔드 HTTP API와 서버 전용 LLM 클라이언트를 추가하고, 프론트엔드 Mock 어댑터를 API 클라이언트로 교체. JSON 스키마 검증 후 분석하고 모든 주장에 evidence_id/인용/확인 상태를 저장.
 4. URL 수집 시 SSRF 방어, 업로드 크기/MIME 검증, 비공개 자료 접근 제어 추가.
@@ -54,3 +54,9 @@
 ## 기술
 
 Next.js App Router, TypeScript, Tailwind CSS, Radix 기반 shadcn/ui 컴포넌트. DB: Supabase/PostgreSQL 설계. 백엔드/LLM 연결은 UI 검증 후 진행.
+
+## 계정 저장 상태
+
+Supabase 회원가입·이메일 확인 안내·세션 복원·로그아웃과 계정별 CRUD를 구현했습니다. SQL 저장 함수는 호출자 권한으로 실행하며 관련 데이터 변경을 한 트랜잭션에 묶습니다. 경험별 기술·역량 배열, 근거 자료와 분석 주장, 여러 근거 연결을 DB에 저장합니다. 변경분만 전송하며 실패하면 성공 안내나 화면 이동을 하지 않습니다. 계정 전환 시 이전 요청의 사용자 ID를 DB에서 검사합니다.
+
+원격 Supabase 프로젝트는 아직 없으며 마이그레이션과 소유권 규칙은 로컬 PGlite PostgreSQL에서 검증했습니다. 실제 이메일 인증과 재로그인·다른 기기 조회는 프로젝트 연결 후 확인해야 합니다. 세부 설정은 [SUPABASE_SETUP.md](SUPABASE_SETUP.md)를 참고하세요.

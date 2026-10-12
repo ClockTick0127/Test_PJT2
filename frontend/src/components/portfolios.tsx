@@ -96,19 +96,20 @@ export function PortfolioLibrary() {
   );
 }
 export function PortfolioPreview({ id }: { id: string }) {
-  const { data, update, toast } = useStore();
+  const { data, update, toast, saving, mode } = useStore();
   const [edit, setEdit] = useState(false);
   const [share, setShare] = useState(false);
   const [device, setDevice] = useState("desktop");
   const [addId, setAddId] = useState("");
   const [copying, setCopying] = useState(false);
+  const [titleDraft, setTitleDraft] = useState<string | null>(null);
   const p = data.portfolios.find((p) => p.id === id);
   if (!p)
     return (
       <Empty
         icon={<PanelsTopLeft size={30} />}
         title="포트폴리오를 찾을 수 없습니다."
-        description="이 브라우저에 저장된 포트폴리오 목록에서 선택해 주세요."
+        description="현재 문서함의 포트폴리오 목록에서 선택해 주세요."
       >
         <Button asChild>
           <Link href="/portfolio">목록으로 이동</Link>
@@ -134,7 +135,11 @@ export function PortfolioPreview({ id }: { id: string }) {
     setCopying(true);
     try {
       await navigator.clipboard.writeText(window.location.origin + "/portfolio/" + id);
-      toast("이 브라우저에서 열 수 있는 미리보기 링크를 복사했습니다.");
+      toast(
+        mode === "demo"
+          ? "이 브라우저에서 열 수 있는 미리보기 링크를 복사했습니다."
+          : "같은 계정으로 로그인하여 볼 수 있는 미리보기 링크를 복사했습니다.",
+      );
     } catch {
       toast("복사하지 못했습니다. 아래 링크를 직접 복사해 주세요.");
     } finally {
@@ -203,9 +208,13 @@ export function PortfolioPreview({ id }: { id: string }) {
           <label>
             포트폴리오 제목
             <input
-              value={p.title}
+              value={titleDraft ?? p.title}
               maxLength={150}
-              onChange={(e) => patch({ title: e.target.value })}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              onBlur={async () => {
+                if (titleDraft !== null && (await patch({ title: titleDraft })))
+                  setTitleDraft(null);
+              }}
             />
           </label>
           <div className="editor-projects">
@@ -218,7 +227,7 @@ export function PortfolioPreview({ id }: { id: string }) {
                   variant="ghost"
                   size="icon"
                   aria-label={e.title + " 위로 이동"}
-                  disabled={index === 0}
+                  disabled={saving || index === 0}
                   onClick={() => move(index, -1)}
                 >
                   <ArrowUp size={15} />
@@ -227,7 +236,7 @@ export function PortfolioPreview({ id }: { id: string }) {
                   variant="ghost"
                   size="icon"
                   aria-label={e.title + " 아래로 이동"}
-                  disabled={index === experiences.length - 1}
+                  disabled={saving || index === experiences.length - 1}
                   onClick={() => move(index, 1)}
                 >
                   <ArrowDown size={15} />
@@ -236,6 +245,7 @@ export function PortfolioPreview({ id }: { id: string }) {
                   variant="ghost"
                   size="icon"
                   aria-label={e.title + " 제외"}
+                  disabled={saving}
                   onClick={() =>
                     patch({ experienceIds: p.experienceIds.filter((v) => v !== e.id) })
                   }
@@ -262,10 +272,9 @@ export function PortfolioPreview({ id }: { id: string }) {
             </select>
             <Button
               variant="outline"
-              disabled={!addId}
-              onClick={() => {
-                patch({ experienceIds: [...p.experienceIds, addId] });
-                setAddId("");
+              disabled={saving || !addId}
+              onClick={async () => {
+                if (await patch({ experienceIds: [...p.experienceIds, addId] })) setAddId("");
               }}
             >
               <Plus size={15} />
@@ -431,8 +440,10 @@ export function PortfolioPreview({ id }: { id: string }) {
         <DialogContent>
           <DialogTitle className="dialog-title">포트폴리오 미리보기 링크</DialogTitle>
           <DialogDescription className="muted">
-            현재 링크는 같은 브라우저에 저장된 포트폴리오를 여는 용도입니다. 다른 사람에게 공개되는
-            웹 공유는 서버 연결 후 제공됩니다.
+            {mode === "demo"
+              ? "데모 링크는 같은 브라우저에서만 열 수 있습니다."
+              : "현재 링크는 같은 계정으로 로그인한 기기에서 열 수 있습니다."}{" "}
+            다른 사람에게 공개되는 웹 공유는 아직 제공되지 않습니다.
           </DialogDescription>
           <div className="share-preview-card">
             <PanelsTopLeft size={28} />

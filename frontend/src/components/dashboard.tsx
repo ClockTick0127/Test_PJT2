@@ -248,7 +248,7 @@ export function Dashboard() {
                 근거와 매칭 이유 읽기
                 <ArrowUpRight size={14} />
               </Link>
-              <small>요구 역량의 가중 커버리지 · 예시 공고</small>
+              <small>요구 역량의 가중 커버리지{topJob.isDemo ? " · 예시 공고" : ""}</small>
             </section>
           )}
         </aside>

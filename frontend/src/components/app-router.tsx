@@ -23,6 +23,8 @@ export function AppRouter() {
     content = <NewExperience />;
   else if (section === "experience" && id && action === "analyze" && path.length === 3)
     content = <AnalysisScreen key={id} id={id} />;
+  else if (section === "experience" && id && action === "edit" && path.length === 3)
+    content = <NewExperience key={id} id={id} />;
   else if (section === "experience" && id && path.length === 2)
     content = <ExperienceDetail key={id} id={id} />;
   else if (section === "jobs" && path.length === 1) content = <JobLibrary />;

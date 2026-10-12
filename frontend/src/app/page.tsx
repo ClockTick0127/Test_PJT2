@@ -46,9 +46,8 @@ const steps = [
 export default function Landing() {
   const router = useRouter();
   const { startDemo } = useStore();
-  const demo = () => {
-    startDemo();
-    router.push("/dashboard");
+  const demo = async () => {
+    if (await startDemo()) router.push("/dashboard");
   };
   return (
     <div className="landing">
@@ -270,7 +269,7 @@ export default function Landing() {
       <footer className="landing-footer">
         <Brand />
         <span>© 2026 folio. Experience meets opportunity.</span>
-        <span>브라우저에 저장되는 프로토타입</span>
+        <span>계정의 기록과 별도의 데모 문서함</span>
       </footer>
     </div>
   );

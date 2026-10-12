@@ -49,7 +49,7 @@ export function Brand({ light = false }: { light?: boolean }) {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const router = useRouter();
-  const { data, ready, storageError } = useStore();
+  const { data, ready, storageError, mode, saving, accountLoaded, reload, logout } = useStore();
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [notifications, setNotifications] = useState(false);
@@ -70,11 +70,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const jobs = data.jobs.filter((j) =>
     (j.company + " " + j.position).toLowerCase().includes(query.toLowerCase()),
   );
-  if (!ready)
+  useEffect(() => {
+    if (ready && mode === "guest") router.replace("/login");
+  }, [ready, mode, router]);
+  if (!ready || mode === "guest")
     return (
       <div className="loading-page">
         <Skeleton className="skeleton-title" />
         <Skeleton className="skeleton-card" />
+      </div>
+    );
+  if (mode === "account" && !accountLoaded)
+    return (
+      <div className="loading-page">
+        <h1>기록을 불러오지 못했습니다.</h1>
+        <p role="alert">{storageError}</p>
+        <Button onClick={() => void reload()}>다시 불러오기</Button>
+        <Button
+          variant="outline"
+          onClick={async () => {
+            if (await logout()) router.replace("/login");
+          }}
+        >
+          로그아웃하고 다시 시작
+        </Button>
       </div>
     );
   return (
@@ -146,7 +165,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </Link>
           <div className="sidebar-footnote">
             <span className="demo-dot" />
-            브라우저 저장 데모<span>v0.1</span>
+            {mode === "demo" ? "브라우저 저장 데모" : "계정에 저장되는 문서함"}
+            <span>v0.2</span>
           </div>
         </div>
       </aside>
@@ -193,10 +213,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
         <main className="main-content">
-          {!data.session && (
+          {mode === "demo" && (
             <div className="demo-info">
               <Sparkles size={15} />
-              브라우저 데모로 둘러보고 있어요.
+              예시 문서함입니다. 실제 계정의 기록과 분리되어 있어요.
               <Link href="/login">
                 내 경험으로 시작하기
                 <ArrowUpRight size={13} />
@@ -206,6 +226,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {storageError && (
             <div className="error-banner" role="alert">
               {storageError}
+            </div>
+          )}
+          {saving && (
+            <div className="demo-info" role="status">
+              변경 내용을 저장하고 있습니다…
             </div>
           )}
           {children}

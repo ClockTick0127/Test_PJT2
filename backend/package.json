@@ -4,16 +4,19 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./mock": "./src/mock.ts"
+    "./mock": "./src/mock.ts",
+    "./account": "./src/repositories/account.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts"
   },
   "dependencies": {
-    "@folio/shared": "0.1.0"
+    "@folio/shared": "0.1.0",
+    "@supabase/supabase-js": "2.117.3"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
     "@types/node": "26.6.4",
     "tsx": "4.23.15",
     "typescript": "7.0.2"

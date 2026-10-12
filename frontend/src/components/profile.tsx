@@ -18,11 +18,11 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from "./ui/dial
 import { PageHeading, HelpNote } from "./shared";
 import { emptyData } from "@folio/shared/mock-data";
 export function ProfileScreen() {
-  const { data, update, toast } = useStore();
+  const { data, update, toast, mode, saving } = useStore();
   const [profile, setProfile] = useState(data.profile);
-  const save = (e: React.FormEvent) => {
+  const save = async (e: React.FormEvent) => {
     e.preventDefault();
-    update((d) => ({ ...d, profile }));
+    if (!(await update((d) => ({ ...d, profile })))) return;
     toast("프로필을 저장했습니다. 포트폴리오에도 반영됩니다.");
   };
   return (
@@ -58,6 +58,7 @@ export function ProfileScreen() {
                 type="email"
                 required
                 value={profile.email}
+                readOnly={mode === "account"}
                 onChange={(e) => setProfile({ ...profile, email: e.target.value })}
               />
             </label>
@@ -87,7 +88,7 @@ export function ProfileScreen() {
               <ShieldCheck size={15} />
               프로필도 직접 확인한 내용으로.
             </span>
-            <Button>
+            <Button disabled={saving}>
               <Check size={16} />
               프로필 저장
             </Button>
@@ -120,14 +121,30 @@ export function ProfileScreen() {
 }
 export function SettingsScreen() {
   const router = useRouter();
-  const { update, startDemo, toast } = useStore();
+  const { update, startDemo, toast, mode, logout, saving } = useStore();
   const [confirm, setConfirm] = useState<"empty" | "demo" | null>(null);
+  const [busy, setBusy] = useState(false);
+  const reset = async () => {
+    setBusy(true);
+    try {
+      const success =
+        confirm === "demo"
+          ? await startDemo(true)
+          : mode === "demo" &&
+            (await update((data) => ({ ...emptyData(), profile: data.profile, session: true })));
+      if (!success) return;
+      setConfirm(null);
+      toast("데모 문서함을 초기화했습니다.");
+    } finally {
+      setBusy(false);
+    }
+  };
   return (
     <>
       <PageHeading
         eyebrow="SETTINGS"
         title="워크스페이스 설정"
-        description="나의 기록과 브라우저 저장 방식을 관리하세요."
+        description="계정의 기록과 데모 문서함을 관리하세요."
       />
       <div className="settings-content">
         <section className="panel settings-panel">
@@ -137,14 +154,21 @@ export function SettingsScreen() {
           </h2>
           <div className="settings-row">
             <div>
-              <strong>이 브라우저에 저장</strong>
-              <p>경험, 공고, 포트폴리오를 브라우저 저장소에 보관합니다.</p>
+              <strong>
+                {mode === "account" ? "계정의 DB에 저장" : "데모는 이 브라우저에 저장"}
+              </strong>
+              <p>
+                {mode === "account"
+                  ? "같은 계정으로 로그인하면 다른 기기에서도 기록을 불러올 수 있습니다."
+                  : "예시 문서함의 변경 내용은 실제 계정과 분리됩니다."}
+              </p>
             </div>
-            <Badge tone="blue">로컬 데모</Badge>
+            <Badge tone="blue">{mode === "account" ? "Supabase 연결" : "로컬 데모"}</Badge>
           </div>
           <HelpNote>
-            브라우저 데이터를 삭제하면 기록도 사라집니다. 다른 기기에서 동기화되거나 실제 서버로
-            업로드되지 않습니다.
+            {mode === "account"
+              ? "로그인한 사용자만 기록을 조회·수정할 수 있습니다. 데모 기록은 계정에 자동으로 업로드하지 않습니다."
+              : "데모 기록은 브라우저 데이터를 삭제하면 사라집니다. 실제 계정 기록에는 영향을 주지 않습니다."}
           </HelpNote>
         </section>
         <section className="panel settings-panel">
@@ -155,12 +179,9 @@ export function SettingsScreen() {
           <div className="settings-row">
             <div>
               <strong>근거 기반 분석 원칙</strong>
-              <p>없는 경험과 숫자는 생성하지 않고, 확인되지 않은 내용은 표시합니다.</p>
+              <p>없는 경험과 숫자는 생성하지 않고 확인되지 않은 내용은 표시합니다.</p>
             </div>
-            <Badge tone="green">
-              <Check size={12} />
-              항상 적용
-            </Badge>
+            <Badge tone="green">항상 적용</Badge>
           </div>
           <div className="settings-row">
             <div>
@@ -177,35 +198,54 @@ export function SettingsScreen() {
           </h2>
           <div className="settings-row">
             <div>
-              <strong>예시 경험으로 다시 시작</strong>
-              <p>현재 기록을 예시 경험·공고·포트폴리오로 교체합니다.</p>
+              <strong>예시 문서함으로 이동</strong>
+              <p>로그아웃 후 별도의 예시 문서함으로 이동합니다. 계정 기록은 유지됩니다.</p>
             </div>
-            <Button variant="outline" size="sm" onClick={() => setConfirm("demo")}>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={busy || saving}
+              onClick={() => setConfirm("demo")}
+            >
               <Sparkles size={15} />
-              데모로 초기화
+              데모로 시작
             </Button>
           </div>
           <div className="settings-row">
             <div>
-              <strong>빈 라이브러리로 시작</strong>
-              <p>내 프로필은 유지하고 경험과 공고, 포트폴리오를 삭제합니다.</p>
+              <strong>데모 기록 초기화</strong>
+              <p>
+                {mode === "demo"
+                  ? "이 브라우저의 데모 기록만 삭제합니다."
+                  : "계정의 경험은 각 문서 상세에서 개별 삭제할 수 있습니다."}
+              </p>
             </div>
-            <Button variant="outline" size="sm" onClick={() => setConfirm("empty")}>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={mode !== "demo" || busy || saving}
+              onClick={() => setConfirm("empty")}
+            >
               <RotateCcw size={15} />
               기록 초기화
             </Button>
           </div>
           <div className="settings-row">
             <div>
-              <strong>워크스페이스 나가기</strong>
-              <p>기록은 이 브라우저에 남겨두고 시작 화면으로 이동합니다.</p>
+              <strong>{mode === "account" ? "로그아웃" : "데모 나가기"}</strong>
+              <p>현재 기기에서 나갑니다. 저장된 기록은 유지됩니다.</p>
             </div>
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => {
-                update((d) => ({ ...d, session: false }));
-                router.push("/login");
+              disabled={busy || saving}
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  if (await logout()) router.push("/login");
+                } finally {
+                  setBusy(false);
+                }
               }}
             >
               <LogOut size={15} />
@@ -214,28 +254,21 @@ export function SettingsScreen() {
           </div>
         </section>
       </div>
-      <Dialog open={!!confirm} onOpenChange={(o) => !o && setConfirm(null)}>
+      <Dialog open={!!confirm} onOpenChange={(open) => !open && !busy && setConfirm(null)}>
         <DialogContent>
-          <DialogTitle className="dialog-title">현재 기록을 초기화할까요?</DialogTitle>
+          <DialogTitle className="dialog-title">데모 문서함을 초기화할까요?</DialogTitle>
           <DialogDescription className="muted">
-            현재 브라우저의 경험, 공고, 포트폴리오를{" "}
-            {confirm === "demo" ? "예시 데이터로 교체합니다." : "삭제합니다. 프로필은 유지됩니다."}{" "}
-            이 작업은 되돌릴 수 없습니다.
+            {confirm === "demo"
+              ? "로그아웃 후 예시 문서함을 초기화합니다."
+              : "이 브라우저의 데모 기록을 삭제합니다."}{" "}
+            실제 계정에 저장된 기록에는 영향을 주지 않습니다.
           </DialogDescription>
           <div className="dialog-actions">
-            <Button variant="outline" onClick={() => setConfirm(null)}>
+            <Button variant="outline" disabled={busy} onClick={() => setConfirm(null)}>
               취소
             </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                if (confirm === "demo") startDemo();
-                else update((d) => ({ ...emptyData(), profile: d.profile, session: true }));
-                setConfirm(null);
-                toast("워크스페이스를 초기화했습니다.");
-              }}
-            >
-              초기화
+            <Button variant="destructive" disabled={busy} onClick={reset}>
+              {busy ? "처리 중…" : "초기화"}
             </Button>
           </div>
         </DialogContent>
